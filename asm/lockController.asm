@@ -2,8 +2,9 @@
 
 ; THIS 1ST VERSION of the program just runs the motor in one direction continuously
 
-
 .def temp =r16
+
+; Maybe we don't really need a 'state' control... just looking at the IR inputs may be enough?
 .def state=r17		; current state of the system: bits 2, 1 and 0:
 					; 001 -> lock closed
 					; 010 -> lock opened
@@ -41,14 +42,10 @@ reti			; Analog Comparator vector address (0x000A)
 
 ; calculations for a clock of 6.1440 MHz
 ; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond
-; 6144000 / 256 = 24000 this is the number of counts I get in a	 second. 24 ticks per millisecond
-; let's try 1024. I don't need timer1, with timer0 is enough!!
 
+; change the name of this to something more generic... it's not 6 ticks any more...
 .equ timer6ticks=0xC4		; -6 = 0xFA
-;.equ timerval = 0xFDA8
-;.equ timerval = 0xF448
-;.equ timlow = 0xA8
-;.equ timhi  = 0xFD
+
 
 
 reset:
@@ -84,7 +81,7 @@ reset:
 	sei						; enable global interrupts
 	; enable int0
 	
-	; TEMPORARY HACK!! in the final program we will onlye nable the l293D when the motor needs to move!
+	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
 
 	ldi ZL, 0
@@ -99,9 +96,9 @@ idle:
 	in temp, TIMSK
 	sbrc temp, 1		; if bit 1 of TIMSK is cleared,it means that timer 0 is off
 	rjmp idle
-	cpi	ZL, 0			; if low retaddr (return address)
+	cpi	ZL, 0			; compare return address with 0
 	breq idle			; is not 0, loop again
-	ijmp
+	ijmp				; it is 0, do an indirect jump (address in Z register).
 
 
 step:
@@ -147,7 +144,6 @@ endstep:
 	rjmp phase1
 
 
-;
 
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
@@ -183,45 +179,35 @@ find_state:
 	; if open barrier active, set to open
 	; if closed barrier active, set to closed
 
-toggle:
-	nop
-	; read open barrier, if active, close,
-	; read closed barrier. if active, open
-	; if we don't know, open until open barrier is active.
 
-open_lock:
+open:
 	nop
 	; here goes the open lock routine
+	; set motor direction. While open barrier inactive (0), do a step (4 phases)
+	; maybe use bit 6 or 7 of 'state' (r17) to control the direction of the motor, used to determine the jumps
+	; between phases (1 -> 4 or 4 -> 1)
 
-close_lock:
+close:
 	nop
 	; here goes the close lock routine
+	; set motor direction. While closed barrier inactive (1), do a step (4 phases)
 
 
-	 ;this is for timer 1
-;delay:		; we need a delay after setting each phase of a step.
-;	ldi r16, 0b10000000	;Timer/Counter 1 Overflow Interrupt Enable bit set
-;	out TIMSK, r16
-
-;	ldi r16, high(timerval)
-;	out TCNT1H, r16				; Timer/Counter 1 High
-;	ldi r16, low(timerval)	    ; Timen/Counter 1 Low
-;	out TCNT1L, r16
+toggle:
+	nop
+	; this is hardware interrupt 0. Set it up on the rising edge of INT0.
+	; WE MUST eliminate bounces in the software, so, when this ISR is called:
+	;	- disable hardware interrupt 0
+	;	- start counting 50 ms (for example), reti
+	;	- at the end of the 50 ms, check if INT0 is still 1
+	;	- if it is, determine what to do, as noted below (re-enable HW interrupt 0, rising edge)
+	;	- if it's not,  re-enable HW interrupt 0, rising edge) and reti 
 	
-;	ldi r16, 0b00000101			; set prescaler to CK/1024
-;	out TCCR1B, r16				; Timer/Counter Control Register 1 B
- ;	rjmp idle
+	; read open barrier, if active (logical 1), close.
+	; read closed barrier, if active (logical 0), open
+	; if neither is active, just open (default action)
 
 
-
-;delay_end:		; Timer 0 ISR, the delay finished.
-;	in r16, SREG	; save the status register
-;	push r16		; on the stack
-
-;	ldi r16, 0b00000000	; Timer/Counter 1 Overflow Interrupt Enable bit cleared (interrupt disabled)
-;	out TIMSK, r16
-
-;	pop r16			; from the stack
-;	out SREG, r16	; restore the status register
-;	reti
-
+; NEXT STEPS:
+; - light up leds according to state/action.
+; - UART interrupt: receive an Open, Close or Toggle command through the serial port (in the future, through Bluetooth)
