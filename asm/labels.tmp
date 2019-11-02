@@ -1,0 +1,37 @@
+<ASSEMBLER_INFO>
+ <VERSION>2.1.42</VERSION>
+ <DEVICE>AT90S2313</DEVICE>
+ <WORKING_DIR>C:\Users\pablo\Documents\avrProjects\lockController</WORKING_DIR>
+ <INCLUDE_PATH>
+  <DIR>C:\Program Files\Atmel\AVR Tools\AvrAssembler2\Appnotes</DIR>
+ </INCLUDE_PATH>
+ <SOURCE_FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</SOURCE_FILE>
+ <INCLUDED_FILES>
+  <FILE>C:\Program Files\Atmel\AVR Tools\AvrAssembler2\Appnotes\2313def.inc</FILE>
+ </INCLUDED_FILES>
+ <OBJECT_FILES>
+  <FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.obj</FILE>
+ </OBJECT_FILES>
+ <HEX_FILES>
+  <FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.hex</FILE>
+ </HEX_FILES>
+ <OUTPUT_FILES>
+  <FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.map</FILE>
+ </OUTPUT_FILES>
+ <LABELS>
+  <reset><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>54</LINE></reset>
+  <toggle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>186</LINE></toggle>
+  <delay_end><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>166</LINE></delay_end>
+  <phase1><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>112</LINE></phase1>
+  <idle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>95</LINE></idle>
+  <step><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>107</LINE></step>
+  <phase2><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>121</LINE></phase2>
+  <delay><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>153</LINE></delay>
+  <phase3><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>128</LINE></phase3>
+  <phase4><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>135</LINE></phase4>
+  <endstep><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>142</LINE></endstep>
+  <find_state><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>181</LINE></find_state>
+  <open_lock><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>192</LINE></open_lock>
+  <close_lock><FILE>C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm</FILE><LINE>196</LINE></close_lock>
+ </LABELS>
+</ASSEMBLER_INFO>

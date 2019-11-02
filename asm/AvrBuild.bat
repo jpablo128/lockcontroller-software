@@ -1,0 +1,2 @@
+@ECHO OFF
+"C:\Program Files\Atmel\AVR Tools\AvrAssembler2\avrasm2.exe" -S "C:\Users\pablo\Documents\avrProjects\lockController\labels.tmp" -fI -W+ie -C V1 -o "C:\Users\pablo\Documents\avrProjects\lockController\lockController.hex" -d "C:\Users\pablo\Documents\avrProjects\lockController\lockController.obj" -e "C:\Users\pablo\Documents\avrProjects\lockController\lockController.eep" -m "C:\Users\pablo\Documents\avrProjects\lockController\lockController.map" "C:\Users\pablo\Documents\avrProjects\lockController\lockController.asm"
