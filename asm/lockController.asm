@@ -41,10 +41,10 @@ reti			; Analog Comparator vector address (0x000A)
 
 
 ; calculations for a clock of 6.1440 MHz
-; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond
+; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond.
+; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
 
-; change the name of this to something more generic... it's not 6 ticks any more...
-.equ timer6ticks=0xC4		; -6 = 0xFA
+.equ timer_count=0xC4		; -60 = 0xC4
 
 
 
@@ -86,7 +86,7 @@ reset:
 
 	ldi ZL, 0
 	ldi ZH, 0
-	rjmp phase1
+	rjmp ef1
 	
 
 idle:
@@ -101,47 +101,154 @@ idle:
 	ijmp				; it is 0, do an indirect jump (address in Z register).
 
 
+; phase name convention:
+; First letter refers to exact steps (e) or smooth steps (s).
+; Second letter refers to forward (f) or backward (b) movement.
+; The number refers to the phase of the movement. "e" refers to ending step.
+
 step:
 	; direction is set by a register or something... depending on direction,
-	; the sequence will be phase1 to 4, or phase4 to 1
+	; the sequence will be ef1 to 4, or ef4 to 1
 	;sbi PortB, 4	; enable L293D
 
-phase1:
+ef1:
 	cbi PortB, 3		; turn off bit 3
 	cbi PortB, 2		; turn off bit 2
 	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 0			; turn on bit 0
-	ldi ZL, low(phase2)		; save the return address
-	ldi ZH, high(phase2)
-	rjmp delay			; JUMP!! call delay 1ms
+	sbi PortB, 0		; turn on bit 0
+	ldi ZL, low(ef2)	; save the return address
+	ldi ZH, high(ef2)
+	rjmp delay			; JUMP!! call delay 10ms
 
-phase2:
+ef2:
 	cbi PortB, 0		; turn off bit 0
 	sbi PortB, 1		; turn on bit 1
-	ldi ZL, low(phase3)	; save the return address
-	ldi ZH, high(phase3)
-	rjmp delay		;	 JUMP!! call delay 1ms
+	ldi ZL, low(ef3)	; save the return address
+	ldi ZH, high(ef3)
+	rjmp delay			; JUMP!! call delay 10ms
 	
-phase3:
+ef3:
 	cbi PortB, 1		; turn off bit 1
 	sbi PortB, 2		; turn on bit 2
-	ldi ZL, low(phase4)	; save the return address
-	ldi ZH, high(phase4)
-	rjmp delay		;	 JUMP!! call delay 1ms
+	ldi ZL, low(ef4)	; save the return address
+	ldi ZH, high(ef4)
+	rjmp delay			; JUMP!! call delay 10ms
 	
-phase4:
-	cbi PortB, 2			; turn off bit 2
-	sbi PortB, 3			; turn on bit 3
-	ldi ZL, low(endstep)	; save the return address
-	ldi ZH, high(endstep)
-	rjmp delay				; JUMP!! call delay 1ms
+ef4:
+	cbi PortB, 2		; turn off bit 2
+	sbi PortB, 3		; turn on bit 3
+	ldi ZL, low(efe)	; save the return address
+	ldi ZH, high(efe)
+	rjmp delay			; JUMP!! call delay 10ms
 
-endstep:
+efe:
 	; if we've reached the end position (open, if it's opening, closed if it's closing), set new state, put retaddr to 0, and jump to idle
-	; otherwise, continue with phase 1
+	; otherwise, continue with ef 1
 
 	; check if we've reached one of the end positions (closed, or open)
-	rjmp phase1
+	rjmp ef1
+
+eb1:
+	sbi PortB, 3		; turn on bit 3
+	cbi PortB, 2		; turn off bit 2
+	cbi PortB, 1		; turn off bit 1
+	cbi PortB, 0		; turn off bit 0
+	ldi ZL, low(eb2)	; save the return address
+	ldi ZH, high(eb2)
+	rjmp delay			; JUMP!! call delay 10ms
+
+eb2:
+	cbi PortB, 3		; turn off bit 3
+	sbi PortB, 2		; turn on bit 2
+	ldi ZL, low(eb3)	; save the return address
+	ldi ZH, high(eb3)
+	rjmp delay			; JUMP!! call delay 10ms
+
+eb3:
+	cbi PortB, 2		; turn off bit 2
+	sbi PortB, 1		; turn on bit 1
+	ldi ZL, low(eb4)	; save the return address
+	ldi ZH, high(eb4)	
+	rjmp delay			; JUMP!! call delay 10ms
+
+eb4:
+	cbi PortB, 1		; turn off bit 1
+	sbi PortB, 0		; turn on bit 0
+	ldi ZL, low(ebe)	; save the return address
+	ldi ZH, high(ebe)
+	rjmp delay			; JUMP!! call delay 10ms
+
+ebe:
+	; check if we've reached one of the end positions (closed, or open)
+	rjmp eb1
+
+sf1:
+	cbi PortB, 3		; turn off bit 3
+	cbi PortB, 2		; turn off bit 2
+	sbi PortB, 1		; turn on bit 1
+	sbi PortB, 0		; turn on bit 0
+	ldi ZL, low(sf2)	; save the return address
+	ldi ZH, high(sf2)
+	rjmp delay			; JUMP!! call delay 10ms
+
+sf2:
+	cbi PortB, 0		; turn off bit 0
+	sbi PortB, 2		; turn on bit 2
+	ldi ZL, low(sf3)	; save the return address
+	ldi ZH, high(sf3)
+	rjmp delay			; JUMP!! call delay 10ms
+	
+sf3:
+	cbi PortB, 1		; turn off bit 1
+	sbi PortB, 3		; turn on bit 3
+	ldi ZL, low(sf4)	; save the return address
+	ldi ZH, high(sf4)
+	rjmp delay			; JUMP!! call delay 10ms
+	
+sf4:
+	cbi PortB, 2		; turn off bit 2
+	sbi PortB, 0		; turn on bit 4
+	ldi ZL, low(sfe)	; save the return address
+	ldi ZH, high(sfe)
+	rjmp delay			; JUMP!! call delay 10ms
+
+sfe:
+	; check if we've reached one of the end positions (closed, or open)
+	rjmp sf1
+
+sb1:
+	sbi PortB, 3		; turn on bit 3
+	cbi PortB, 2		; turn off bit 2
+	cbi PortB, 1		; turn off bit 1
+	sbi PortB, 0		; turn on bit 0
+	ldi ZL, low(sb2)	; save the return address
+	ldi ZH, high(sb2)
+	rjmp delay			; JUMP!! call delay 10ms
+
+sb2:
+	cbi PortB, 0		; turn off bit 0
+	sbi PortB, 2		; turn on bit 2
+	ldi ZL, low(sb3)	; save the return address
+	ldi ZH, high(sb3)
+	rjmp delay			; JUMP!! call delay 10ms
+
+sb3:
+	cbi PortB, 3		; turn off bit 3
+	sbi PortB, 1		; turn on bit 1
+	ldi ZL, low(sb4)	; save the return address
+	ldi ZH, high(sb4)	
+	rjmp delay			; JUMP!! call delay 10ms
+
+sb4:
+	cbi PortB, 2		; turn off bit 2
+	sbi PortB, 0		; turn on bit 0
+	ldi ZL, low(sbe)	; save the return address
+	ldi ZH, high(sbe)
+	rjmp delay			; JUMP!! call delay 10ms
+
+sbe:
+	; check if we've reached one of the end positions (closed, or open)
+	rjmp sb1
 
 
 
@@ -150,10 +257,10 @@ delay:		; we need a delay after setting each phase of a step.
 	ldi r16, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, r16				; Timer/Counter 0 Control Register  
 
-	ldi r16, 0b00000010	;Timer/Counter 0 Overflow Interrupt Enable bit set
+	ldi r16, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
 	out TIMSK, r16
 
-	ldi r16, timer6ticks
+	ldi r16, timer_count
 	out TCNT0, r16				; Put counter time in TCNT0 (Timer/Counter 0), start counting
 	rjmp idle
 
@@ -185,7 +292,7 @@ open:
 	; here goes the open lock routine
 	; set motor direction. While open barrier inactive (0), do a step (4 phases)
 	; maybe use bit 6 or 7 of 'state' (r17) to control the direction of the motor, used to determine the jumps
-	; between phases (1 -> 4 or 4 -> 1)
+	; between efs (1 -> 4 or 4 -> 1)
 
 close:
 	nop
