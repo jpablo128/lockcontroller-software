@@ -86,7 +86,11 @@ reset:
 
 	ldi ZL, 0
 	ldi ZH, 0
+
+	ldi r20, 0xFF    ; to test bolu's phases, just do 256 steps with each type of phase it's about a revolution and a quarter
+
 	rjmp ef1
+
 	
 
 idle:
@@ -146,7 +150,11 @@ efe:
 	; otherwise, continue with ef 1
 
 	; check if we've reached one of the end positions (closed, or open)
-	rjmp ef1
+	; decremenr r20, if 0 , load 0xFF in r20 and go to next type of step
+	dec r20
+	brne ef1
+	ldi r20, 0xFF
+
 
 eb1:
 	sbi PortB, 3		; turn on bit 3
@@ -180,7 +188,10 @@ eb4:
 
 ebe:
 	; check if we've reached one of the end positions (closed, or open)
-	rjmp eb1
+	dec r20
+	brne eb1
+	ldi r20, 0xFF
+	
 
 sf1:
 	cbi PortB, 3		; turn off bit 3
@@ -214,7 +225,9 @@ sf4:
 
 sfe:
 	; check if we've reached one of the end positions (closed, or open)
-	rjmp sf1
+	dec r20
+	brne sf1
+	ldi r20, 0xFF
 
 sb1:
 	sbi PortB, 3		; turn on bit 3
@@ -248,8 +261,10 @@ sb4:
 
 sbe:
 	; check if we've reached one of the end positions (closed, or open)
-	rjmp sb1
-
+	dec r20
+	brne sb1
+	ldi r20, 0xFF
+	rjmp ef1			; repeat ad infinitum
 
 
 ; this is for timer 0
