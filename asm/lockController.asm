@@ -87,7 +87,7 @@ reset:
 	ldi ZL, 0
 	ldi ZH, 0
 
-	ldi r20, 0xFF    ; to test bolu's phases, just do 256 steps with each type of phase it's about a revolution and a quarter
+	ldi r20, 0xFF    ; to test bolu's phases, just do 256 steps with each type of phase. It's about a revolution and a quarter
 
 	rjmp ef1
 
