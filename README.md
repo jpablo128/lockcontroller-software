@@ -44,7 +44,20 @@ The current version of the software just sets up the basic stuff (interrupt vect
 
 So basically, the software is doing very little at this point (told ya: this is a work in progress!).
 
-## To do
+## Status / To do
 
-Comments in the .asm file indicate next steps.
+Pull request #1 (by 0xb0lu) has been merged. To test the functionality, the program makes the motor run 256 steps of each type in each direction.
+Videos of the program in action:
+
+- https://youtu.be/ZtfYEbUmUg4
+- https://youtu.be/187Hbh8Rkw4
+
+
+Next steps:
+
+- Modify the circuit on the breadboard to add the infrared slot detectors (limit switches)
+- Add the code to check the limit switches to stop the motor
+- Add push button to manually toggle the status of the lock & corresponding code.
+
+
 
