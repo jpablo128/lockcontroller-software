@@ -39,25 +39,19 @@ The at90s2313 pins are used as follows:
 - Pin 17: PB5: green led output
 - Pin 18: PB6: red led output
 
-## Current version 
-The current version of the software just sets up the basic stuff (interrupt vectors), and makes the motor move in one direction continuosly. This is the first thing we had to try to get the timings right (delay after energizing the coils of the motor in each phase of a step).
-
-So basically, the software is doing very little at this point (told ya: this is a work in progress!).
-
 ## Status / To do
 
 Pull request #1 (by 0xb0lu) has been merged. To test the functionality, the program makes the motor run 256 steps of each type in each direction.
 Videos of the program in action:
 
-- https://youtu.be/ZtfYEbUmUg4
-- https://youtu.be/187Hbh8Rkw4
+- [https://youtu.be/ZtfYEbUmUg4](https://youtu.be/ZtfYEbUmUg4)
+- [https://youtu.be/187Hbh8Rkw4](https://youtu.be/187Hbh8Rkw4)  
 
 
 Next steps:
 
 - Modify the circuit on the breadboard to add the infrared slot detectors (limit switches)
 - Add the code to check the limit switches to stop the motor
-- Add push button to manually toggle the status of the lock & corresponding code.
-
+- Add push button to manually toggle the status of the lock and implement corresponding code.
 
 
