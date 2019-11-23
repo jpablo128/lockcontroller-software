@@ -23,6 +23,7 @@
 ; this will depend on how things are arranged physically.
 
 .def retaddr=r19
+.def limitsw=r20	; limit switch to check for
 
 ;.equ nibbles =0b10100101
 
@@ -73,8 +74,13 @@ reset:
 	clr outctrl			; set r18 to 0b00000000
 	out PortB, outctrl 	; set all port B outputs to 0
 
-	; set pd2, pd4 and pd5 as inputs
+	; set pd2, pd4 and pd5 as inputs, activate their pull-up resistors
 	; port D is input by default
+	clr temp
+	out DDRD, temp			; set port D as input
+	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
+	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
+
 	; set state according to input
 
  
@@ -87,10 +93,8 @@ reset:
 	ldi ZL, 0
 	ldi ZH, 0
 
-	ldi r20, 0xFF    ; to test bolu's phases, just do 256 steps with each type of phase. It's about a revolution and a quarter
-
-	rjmp ef1
-
+	;rjmp ef1
+	rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
 	
 
 idle:
@@ -151,9 +155,7 @@ efe:
 
 	; check if we've reached one of the end positions (closed, or open)
 	; decremenr r20, if 0 , load 0xFF in r20 and go to next type of step
-	dec r20
-	brne ef1
-	ldi r20, 0xFF
+	rjmp ef1
 
 
 eb1:
@@ -188,10 +190,8 @@ eb4:
 
 ebe:
 	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne eb1
-	ldi r20, 0xFF
-	
+	rjmp eb1
+
 
 sf1:
 	cbi PortB, 3		; turn off bit 3
@@ -224,10 +224,17 @@ sf4:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sfe:
-	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne sf1
-	ldi r20, 0xFF
+	; check if we've reached the end position (close). We're assuming that 'forward' direction is 'close lock'.
+	in temp, PinD			; read port D pins
+	and temp, limitsw		; the 'close' limit switch is 'active' when 0... so...
+	brbs SREG_Z, endclose	; branch if status flag Z is set, that is, if result of 'and' was NOT zero
+	rjmp sf1				; if and was 0, the lock is still not completely open, so we do one more step
+endclose:					; here, the lock is completely open. Reset everything and go to idle
+	ldi ZL, 0
+	ldi ZH, 0
+	rjmp idle
+
+
 
 sb1:
 	sbi PortB, 3		; turn on bit 3
@@ -260,11 +267,16 @@ sb4:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sbe:
-	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne sb1
-	ldi r20, 0xFF
-	rjmp ef1			; repeat ad infinitum
+	; check if we've reached the end position (open). We're assuming that 'backward' direction is 'open lock'.
+	in temp, PinD			; read port D pins
+	and temp, limitsw		; the 'open' limit switch is 'active' when 1... so...
+	brbc SREG_Z, endopen	; branch if status flag Z is set, that is, if result of 'and' was NOT zero
+	rjmp sb1				; if and was 0, the lock is still not completely open, so we do one more step
+endopen:					; here, the lock is completely open. Reset everything and go to idle
+	ldi ZL, 0
+	ldi ZH, 0
+	rjmp idle
+
 
 
 ; this is for timer 0
@@ -303,17 +315,13 @@ find_state:
 
 
 open:
-	nop
-	; here goes the open lock routine
-	; set motor direction. While open barrier inactive (0), do a step (4 phases)
-	; maybe use bit 6 or 7 of 'state' (r17) to control the direction of the motor, used to determine the jumps
-	; between efs (1 -> 4 or 4 -> 1)
+	ldi limitsw, 0b000010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
+	rjmp sb1					; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
+	
 
 close:
-	nop
-	; here goes the close lock routine
-	; set motor direction. While closed barrier inactive (1), do a step (4 phases)
-
+	ldi limitsw, 0b000100000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
 	nop
