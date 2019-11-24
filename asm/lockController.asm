@@ -264,7 +264,8 @@ open:
 	
 
 close:
-	ldi limitsw, 0b00110000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	;ldi limitsw, 0b00110000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	ldi limitsw, 0b00100000	; define which limit switch to test for, pd5 is for 'close' limit switch
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:

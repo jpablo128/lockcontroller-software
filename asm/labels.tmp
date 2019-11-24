@@ -20,7 +20,7 @@
  </OUTPUT_FILES>
  <LABELS>
   <reset><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>53</LINE></reset>
-  <toggle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>270</LINE></toggle>
+  <toggle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>271</LINE></toggle>
   <delay_end><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>240</LINE></delay_end>
   <idle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>106</LINE></idle>
   <step><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>134</LINE></step>
