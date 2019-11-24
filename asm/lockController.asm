@@ -24,6 +24,7 @@
 
 .def retaddr=r19
 .def limitsw=r20	; limit switch to check for
+.def temp2=r21
 
 ;.equ nibbles =0b10100101
 
@@ -35,7 +36,7 @@ reti			; timer 1 capture event vector address (0x0003)
 reti			; timer 1 compare match vector address (0x0004)
 reti			;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
 rjmp delay_end	;rjmp delay_end	; timer 0 overflow vector address (0x0006)
-reti			; UART Rx Complete vector address (0x0007)
+rjmp uart_rxd   ; UART Rx Complete vector address (0x0007)
 reti			; UART Data Register Empty vector address (0x0008)
 reti			; UART Tx Complete vector address (0x0009)
 reti			; Analog Comparator vector address (0x000A)
@@ -91,7 +92,15 @@ reset:
 	out MCUCR, temp			; set rising edge on int0
 	ldi temp, 0b01000000
 	out GIMSK, temp			; enable int0
-	
+
+	; setup uart
+	ldi r16, 39
+	out UBRR, r16
+	 
+	ldi r16, 0b10011000
+	out UCR, r16
+ 
+
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
 
@@ -278,27 +287,15 @@ toggle:
 
 	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
 
+uart_rxd:
+	in temp, UDR 
+	cpi temp, 0b01010101
+	breq toggle
+	reti
+	
 
 
-	; read pd4, if 1 , we should close
-	; in any other case, open
 
-	;ldi ZL, low(conttlg)	; save the return address
-	;ldi ZH, high(conttgl)
-	;rjmp delay2			; JUMP!! call delay 150ms
-
-	; this is hardware interrupt 0. Set it up on the rising edge of INT0.
-	; WE MUST eliminate bounces in the software, so, when this ISR is called:
-	;	- disable hardware interrupt 0
-	;	- start counting 150 ms (for example), reti
-	;	- at the end of the 150 ms, check if INT0 is still 1
-	;	- if it is, determine what to do, as noted below (re-enable HW interrupt 0, rising edge)
-	;	- if it's not,  re-enable HW interrupt 0, rising edge) and reti 
-	;nop
-		
-	; read open barrier, if active (logical 1), close.
-	; read closed barrier, if active (logical 0), open
-	; if neither is active, just open (default action)
 
 
 ; NEXT STEPS:
