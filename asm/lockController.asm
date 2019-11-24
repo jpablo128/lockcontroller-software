@@ -23,6 +23,7 @@
 ; this will depend on how things are arranged physically.
 
 .def retaddr=r19
+.def limitsw=r20	; limit switch to check for
 
 ;.equ nibbles =0b10100101
 
@@ -45,6 +46,7 @@ reti			; Analog Comparator vector address (0x000A)
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
 
 .equ timer_count=0xC4		; -60 = 0xC4
+.equ timer_150=0xFC7C		; -150 = FC7C
 
 
 
@@ -73,13 +75,22 @@ reset:
 	clr outctrl			; set r18 to 0b00000000
 	out PortB, outctrl 	; set all port B outputs to 0
 
-	; set pd2, pd4 and pd5 as inputs
+	; set pd2, pd4 and pd5 as inputs, activate their pull-up resistors
 	; port D is input by default
+	clr temp
+	out DDRD, temp			; set port D as input
+	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
+	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
+
 	; set state according to input
 
  
 	sei						; enable global interrupts
-	; enable int0
+	
+	ldi temp, 0b00000011
+	out MCUCR, temp			; set rising edge on int0
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
 	
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
@@ -87,13 +98,23 @@ reset:
 	ldi ZL, 0
 	ldi ZH, 0
 
-	ldi r20, 0xFF    ; to test bolu's phases, just do 256 steps with each type of phase. It's about a revolution and a quarter
-
-	rjmp ef1
-
+	;rjmp ef1
+	rjmp idle;
+	;open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
 	
 
 idle:
+	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
+	; if timer 0 is on, we're still in a delay, so let's continue idling
+	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
+	in temp, TIMSK
+	sbrc temp, 1		; if bit 1 of TIMSK is cleared,it means that timer 0 is off
+	rjmp idle
+	cpi	ZL, 0			; compare return address with 0
+	breq idle			; is not 0, loop again
+	ijmp				; it is 0, do an indirect jump (address in Z register).
+
+
 	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
 	; if timer 0 is on, we're still in a delay, so let's continue idling
 	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
@@ -114,84 +135,6 @@ step:
 	; direction is set by a register or something... depending on direction,
 	; the sequence will be ef1 to 4, or ef4 to 1
 	;sbi PortB, 4	; enable L293D
-
-ef1:
-	cbi PortB, 3		; turn off bit 3
-	cbi PortB, 2		; turn off bit 2
-	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 0		; turn on bit 0
-	ldi ZL, low(ef2)	; save the return address
-	ldi ZH, high(ef2)
-	rjmp delay			; JUMP!! call delay 10ms
-
-ef2:
-	cbi PortB, 0		; turn off bit 0
-	sbi PortB, 1		; turn on bit 1
-	ldi ZL, low(ef3)	; save the return address
-	ldi ZH, high(ef3)
-	rjmp delay			; JUMP!! call delay 10ms
-	
-ef3:
-	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 2		; turn on bit 2
-	ldi ZL, low(ef4)	; save the return address
-	ldi ZH, high(ef4)
-	rjmp delay			; JUMP!! call delay 10ms
-	
-ef4:
-	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 3		; turn on bit 3
-	ldi ZL, low(efe)	; save the return address
-	ldi ZH, high(efe)
-	rjmp delay			; JUMP!! call delay 10ms
-
-efe:
-	; if we've reached the end position (open, if it's opening, closed if it's closing), set new state, put retaddr to 0, and jump to idle
-	; otherwise, continue with ef 1
-
-	; check if we've reached one of the end positions (closed, or open)
-	; decremenr r20, if 0 , load 0xFF in r20 and go to next type of step
-	dec r20
-	brne ef1
-	ldi r20, 0xFF
-
-
-eb1:
-	sbi PortB, 3		; turn on bit 3
-	cbi PortB, 2		; turn off bit 2
-	cbi PortB, 1		; turn off bit 1
-	cbi PortB, 0		; turn off bit 0
-	ldi ZL, low(eb2)	; save the return address
-	ldi ZH, high(eb2)
-	rjmp delay			; JUMP!! call delay 10ms
-
-eb2:
-	cbi PortB, 3		; turn off bit 3
-	sbi PortB, 2		; turn on bit 2
-	ldi ZL, low(eb3)	; save the return address
-	ldi ZH, high(eb3)
-	rjmp delay			; JUMP!! call delay 10ms
-
-eb3:
-	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 1		; turn on bit 1
-	ldi ZL, low(eb4)	; save the return address
-	ldi ZH, high(eb4)	
-	rjmp delay			; JUMP!! call delay 10ms
-
-eb4:
-	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 0		; turn on bit 0
-	ldi ZL, low(ebe)	; save the return address
-	ldi ZH, high(ebe)
-	rjmp delay			; JUMP!! call delay 10ms
-
-ebe:
-	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne eb1
-	ldi r20, 0xFF
-	
 
 sf1:
 	cbi PortB, 3		; turn off bit 3
@@ -224,10 +167,17 @@ sf4:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sfe:
-	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne sf1
-	ldi r20, 0xFF
+	; check if we've reached the end position (close). We're assuming that 'forward' direction is 'close lock'.
+	in temp, PinD			; read port D pins
+	and temp, limitsw		; the 'close' limit switch is 'active' when 0... so...
+	brbs SREG_Z, endclose	; branch if status flag Z is set, that is, if result of 'and' was zero
+	rjmp sf1				; if and was 0, the lock is still not completely open, so we do one more step
+endclose:					; here, the lock is completely open. Reset everything and go to idle
+	ldi ZL, 0
+	ldi ZH, 0
+	rjmp idle
+
+
 
 sb1:
 	sbi PortB, 3		; turn on bit 3
@@ -260,11 +210,16 @@ sb4:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sbe:
-	; check if we've reached one of the end positions (closed, or open)
-	dec r20
-	brne sb1
-	ldi r20, 0xFF
-	rjmp ef1			; repeat ad infinitum
+	; check if we've reached the end position (open). We're assuming that 'backward' direction is 'open lock'.
+	in temp, PinD			; read port D pins
+	and temp, limitsw		; the 'open' limit switch is 'active' when 1... so...
+	brbc SREG_Z, endopen	; branch if status flag Z is set, that is, if result of 'and' was zero
+	rjmp sb1				; if and was 0, the lock is still not completely open, so we do one more step
+endopen:					; here, the lock is completely open. Reset everything and go to idle
+	ldi ZL, 0
+	ldi ZH, 0
+	rjmp idle
+
 
 
 ; this is for timer 0
@@ -278,6 +233,7 @@ delay:		; we need a delay after setting each phase of a step.
 	ldi r16, timer_count
 	out TCNT0, r16				; Put counter time in TCNT0 (Timer/Counter 0), start counting
 	rjmp idle
+
 
 
 
@@ -303,28 +259,43 @@ find_state:
 
 
 open:
-	nop
-	; here goes the open lock routine
-	; set motor direction. While open barrier inactive (0), do a step (4 phases)
-	; maybe use bit 6 or 7 of 'state' (r17) to control the direction of the motor, used to determine the jumps
-	; between efs (1 -> 4 or 4 -> 1)
+	ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
+	rjmp sb1					; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
+	
 
 close:
-	nop
-	; here goes the close lock routine
-	; set motor direction. While closed barrier inactive (1), do a step (4 phases)
-
+	;ldi limitsw, 0b00110000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	ldi limitsw, 0b00100000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
-	nop
+	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
+	in temp, PinD			; read port D pins
+	
+	sei
+	and temp, limitsw
+	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
+
+	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
+
+
+
+	; read pd4, if 1 , we should close
+	; in any other case, open
+
+	;ldi ZL, low(conttlg)	; save the return address
+	;ldi ZH, high(conttgl)
+	;rjmp delay2			; JUMP!! call delay 150ms
+
 	; this is hardware interrupt 0. Set it up on the rising edge of INT0.
 	; WE MUST eliminate bounces in the software, so, when this ISR is called:
 	;	- disable hardware interrupt 0
-	;	- start counting 50 ms (for example), reti
-	;	- at the end of the 50 ms, check if INT0 is still 1
+	;	- start counting 150 ms (for example), reti
+	;	- at the end of the 150 ms, check if INT0 is still 1
 	;	- if it is, determine what to do, as noted below (re-enable HW interrupt 0, rising edge)
 	;	- if it's not,  re-enable HW interrupt 0, rising edge) and reti 
-	
+	;nop
+		
 	; read open barrier, if active (logical 1), close.
 	; read closed barrier, if active (logical 0), open
 	; if neither is active, just open (default action)

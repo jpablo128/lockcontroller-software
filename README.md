@@ -39,6 +39,34 @@ The at90s2313 pins are used as follows:
 - Pin 17: PB5: green led output
 - Pin 18: PB6: red led output
 
+## Open/close logic notes
+
+The logic for the limit switches is as follows:
+
+    - Pin  8: PD4: OPEN signal, 1 when active, 0 when inactive⋅⋅
+    - Pin  9: PD5: CLOSED signal, 0 when active, 1 when inactive
+
+     pd5   pd4
+      1     1     -> lock opened
+      0     0     -> lock closed
+      1     0     -> somewhere in between
+      0     1     -> impossible
+
+	open:
+		ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
+		rjmp sb1					; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
+
+
+	close:	
+		ldi limitsw, 0b00100000	; define which limit switch to test for, pd5 is for 'close' limit switch
+		rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
+
+There's an impossible state (the lock would be both open and closed at the same time):
+	pd5 = 0   and pd4 = 1  
+
+SAY SOMETHING ABOUT THE NEGATIVE/POSITIV LOGIC
+
+
 ## Status / To do
 
 Pull request #1 (by 0xb0lu) has been merged. To test the functionality, the program makes the motor run 256 steps of each type in each direction.
