@@ -46,6 +46,7 @@ reti			; Analog Comparator vector address (0x000A)
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
 
 .equ timer_count=0xC4		; -60 = 0xC4
+.equ timer_150=0xFC7C		; -150 = FC7C
 
 
 
@@ -85,7 +86,11 @@ reset:
 
  
 	sei						; enable global interrupts
-	; enable int0
+	
+	ldi temp, 0b00000011
+	out MCUCR, temp			; set rising edge on int0
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
 	
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
@@ -94,10 +99,22 @@ reset:
 	ldi ZH, 0
 
 	;rjmp ef1
-	rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
+	rjmp idle;
+	;open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
 	
 
 idle:
+	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
+	; if timer 0 is on, we're still in a delay, so let's continue idling
+	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
+	in temp, TIMSK
+	sbrc temp, 1		; if bit 1 of TIMSK is cleared,it means that timer 0 is off
+	rjmp idle
+	cpi	ZL, 0			; compare return address with 0
+	breq idle			; is not 0, loop again
+	ijmp				; it is 0, do an indirect jump (address in Z register).
+
+
 	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
 	; if timer 0 is on, we're still in a delay, so let's continue idling
 	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
@@ -219,6 +236,7 @@ delay:		; we need a delay after setting each phase of a step.
 
 
 
+
 delay_end:		; Timer 0 ISR, the delay finished.
 	in r16, SREG	; save the status register
 	push r16		; on the stack
@@ -250,15 +268,36 @@ close:
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
-	nop
+	ldi temp, 0b00000000
+	out GIMSK, temp			; disable int0
+
+	ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
+	in temp, PinD			; read port D pins
+	
+	sei
+	and temp, limitsw
+	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was NOT zero
+							; enable global interrupts
+	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
+
+
+
+	; read pd4, if 1 , we should close
+	; in any other case, open
+
+	;ldi ZL, low(conttlg)	; save the return address
+	;ldi ZH, high(conttgl)
+	;rjmp delay2			; JUMP!! call delay 150ms
+
 	; this is hardware interrupt 0. Set it up on the rising edge of INT0.
 	; WE MUST eliminate bounces in the software, so, when this ISR is called:
 	;	- disable hardware interrupt 0
-	;	- start counting 50 ms (for example), reti
-	;	- at the end of the 50 ms, check if INT0 is still 1
+	;	- start counting 150 ms (for example), reti
+	;	- at the end of the 150 ms, check if INT0 is still 1
 	;	- if it is, determine what to do, as noted below (re-enable HW interrupt 0, rising edge)
 	;	- if it's not,  re-enable HW interrupt 0, rising edge) and reti 
-	
+	;nop
+		
 	; read open barrier, if active (logical 1), close.
 	; read closed barrier, if active (logical 0), open
 	; if neither is active, just open (default action)
