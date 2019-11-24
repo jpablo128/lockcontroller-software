@@ -170,7 +170,7 @@ sfe:
 	; check if we've reached the end position (close). We're assuming that 'forward' direction is 'close lock'.
 	in temp, PinD			; read port D pins
 	and temp, limitsw		; the 'close' limit switch is 'active' when 0... so...
-	brbs SREG_Z, endclose	; branch if status flag Z is set, that is, if result of 'and' was NOT zero
+	brbs SREG_Z, endclose	; branch if status flag Z is set, that is, if result of 'and' was zero
 	rjmp sf1				; if and was 0, the lock is still not completely open, so we do one more step
 endclose:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
@@ -213,7 +213,7 @@ sbe:
 	; check if we've reached the end position (open). We're assuming that 'backward' direction is 'open lock'.
 	in temp, PinD			; read port D pins
 	and temp, limitsw		; the 'open' limit switch is 'active' when 1... so...
-	brbc SREG_Z, endopen	; branch if status flag Z is set, that is, if result of 'and' was NOT zero
+	brbc SREG_Z, endopen	; branch if status flag Z is set, that is, if result of 'and' was zero
 	rjmp sb1				; if and was 0, the lock is still not completely open, so we do one more step
 endopen:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
@@ -264,20 +264,17 @@ open:
 	
 
 close:
-	ldi limitsw, 0b00100000	; define which limit switch to test for, pd5 is for 'close' limit switch
+	ldi limitsw, 0b00110000	; define which limit switch to test for, pd5 is for 'close' limit switch
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
-	ldi temp, 0b00000000
-	out GIMSK, temp			; disable int0
-
-	ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
+	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
 	
 	sei
 	and temp, limitsw
-	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was NOT zero
-							; enable global interrupts
+	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
+
 	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
 
 
