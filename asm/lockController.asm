@@ -94,7 +94,7 @@ reset:
 	ldi r16, 39
 	out UBRR, r16
 	 
-	ldi r16, 0b10011000
+	ldi r16, 0b10010000		; enable RXCIE and RXEN
 	out UCR, r16
  
 
