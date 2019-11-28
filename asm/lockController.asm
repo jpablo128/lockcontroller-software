@@ -277,7 +277,7 @@ close:
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
-	;cbi PortB, 6		; turn off bit 6, red led
+	cbi PortB, 6		; turn off bit 6, red led
 
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
@@ -292,7 +292,7 @@ uart_rxd:
 	in temp, UDR 
 	cpi temp, 0b01010101
 	breq toggle
-	;sbi PortB, 6		; turn on bit 6, red led. So we can see if the uart received, but it was not the right char.
+	sbi PortB, 6		; turn on bit 6, red led. So we can see if the uart received, but it was not the right char.
 	reti
 	
 
