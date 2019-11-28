@@ -290,9 +290,11 @@ toggle:
 
 uart_rxd:
 	in temp, UDR 
+	out UDR, temp			; echo back the received byte, to see what the hell is going on
 	cpi temp, 0b01010101
 	breq toggle
 	sbi PortB, 6		; turn on bit 6, red led. So we can see if the uart received, but it was not the right char.
+
 	reti
 	
 
