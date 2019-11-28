@@ -85,9 +85,6 @@ reset:
 
 	; set state according to input
 
- 
-	sei						; enable global interrupts
-	
 	ldi temp, 0b00000011
 	out MCUCR, temp			; set rising edge on int0
 	ldi temp, 0b01000000
@@ -106,6 +103,8 @@ reset:
 
 	ldi ZL, 0
 	ldi ZH, 0
+
+	sei						; enable global interrupts
 
 	;rjmp ef1
 	rjmp idle;
@@ -278,6 +277,8 @@ close:
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
+	cbi PortB, 6		; turn off bit 6, red led
+
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
 	
@@ -291,6 +292,7 @@ uart_rxd:
 	in temp, UDR 
 	cpi temp, 0b01010101
 	breq toggle
+	sbi PortB, 6		; turn on bit 6, red led. So we can see if the uart received, but it was not the right char.
 	reti
 	
 
