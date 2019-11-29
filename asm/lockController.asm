@@ -293,7 +293,7 @@ toggle:
 
 uart_rxd:
 	in temp2, UDR 
-	cpi temp2, 0b01010101
+	cpi temp2, 14
 	breq toggle
 	sbi PortB, 6		; turn off bit 6, red led to indicate we got a char, but it's not U
 	reti
