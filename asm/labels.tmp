@@ -41,5 +41,6 @@
   <find_state><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>263</LINE></find_state>
   <open><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>269</LINE></open>
   <close><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>274</LINE></close>
+  <frame_err><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>305</LINE></frame_err>
  </LABELS>
 </ASSEMBLER_INFO>
