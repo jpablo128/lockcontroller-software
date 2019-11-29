@@ -91,7 +91,8 @@ reset:
 	out GIMSK, temp			; enable int0
 
 	; setup uart
-	ldi r16, 39
+	;ldi r16, 39			;9600 baud
+	ldi r16, 19			;19200 baud
 	out UBRR, r16
 	 
 	ldi r16, 0b10011000		; enable RXCIE and RXEN and txen
@@ -290,16 +291,9 @@ toggle:
 
 uart_rxd:
 	in temp, UDR 
-	;out UDR, temp			; echo back the received byte, to see what the hell is going on; THIS DOESN'T DO ANYTHING that I can see
-	; maybe put sei here?? shouldn't make a difference
-	; read USR bit 4, if it's one there's a FRAMING ERROR
-	in temp2, USR
-	andi temp2, 0b00010000	;check if bit 4 (Framing Error) is on
-	brne frame_err
-	cbi PortB, 6		; turn off bit 6, red led
-	
 	cpi temp, 0b01010101
 	breq toggle
+	sbi PortB, 6		; turn off bit 6, red led to indicate we got a char, but it's not U
 	reti
 
 frame_err:
