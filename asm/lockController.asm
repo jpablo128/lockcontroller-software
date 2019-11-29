@@ -93,7 +93,8 @@ reset:
 	; setup uart
 	;ldi r16, 39			;9600 baud
 	;ldi r16, 19			;19200 baud
-	ldi r16, 49				;9600 baud on a 7.67375 MHz clock
+	;ldi r16, 49				;9600 baud on a 7.67375 MHz clock
+	ldi r16, 79				;4800 baud
 	out UBRR, r16
 	 
 	ldi r16, 0b10011000		; enable RXCIE and RXEN and txen
