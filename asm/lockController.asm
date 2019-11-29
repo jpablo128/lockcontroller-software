@@ -91,10 +91,10 @@ reset:
 	out GIMSK, temp			; enable int0
 
 	; setup uart
-	;ldi r16, 39			;9600 baud
+	ldi r16, 39			;9600 baud
 	;ldi r16, 19			;19200 baud
 	;ldi r16, 49				;9600 baud on a 7.67375 MHz clock
-	ldi r16, 79				;4800 baud
+	;ldi r16, 79				;4800 baud
 	out UBRR, r16
 	 
 	ldi r16, 0b10011000		; enable RXCIE and RXEN and txen
@@ -292,15 +292,12 @@ toggle:
 	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
 
 uart_rxd:
-	in temp, UDR 
-	cpi temp, 0b01010101
+	in temp2, UDR 
+	cpi temp2, 0b01010101
 	breq toggle
 	sbi PortB, 6		; turn off bit 6, red led to indicate we got a char, but it's not U
 	reti
 
-frame_err:
-	sbi PortB, 6		; turn on bit 6, red led to indicate framing error
-	reti
 	
 
 
