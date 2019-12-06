@@ -46,9 +46,13 @@ reti			; Analog Comparator vector address (0x000A)
 ; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond.
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
 
-.equ timer_count=0xC4		; -60 = 0xC4
-.equ timer_150=0xFC7C		; -150 = FC7C
+;.equ timer_count=0xC4		; -60 = 0xC4
 
+; calculations for a clock of 8 MHz  (new test board)
+; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
+; for 10 millisecond -> 80 ticks.
+
+.equ timer_count=0xB0		; -80 = 0xB0
 
 
 reset:
@@ -91,13 +95,11 @@ reset:
 	out GIMSK, temp			; enable int0
 
 	; setup uart
-	ldi r16, 39			;9600 baud
-	;ldi r16, 19			;19200 baud
-	;ldi r16, 49				;9600 baud on a 7.67375 MHz clock
-	;ldi r16, 79				;4800 baud
+	ldi r16, 51			;9600 baud on an 8 MHz clock
+	;ldi r16, 39			;9600 baud on a 6.1440 MHz clock
 	out UBRR, r16
 	 
-	ldi r16, 0b10011000		; enable RXCIE and RXEN and txen
+	ldi r16, 0b10010000		; enable RXCIE and RXEN 
 	out UCR, r16
  
 
@@ -280,8 +282,6 @@ close:
 	rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 toggle:
-	cbi PortB, 6		; turn off bit 6, red led
-
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
 	
@@ -293,9 +293,9 @@ toggle:
 
 uart_rxd:
 	in temp2, UDR 
-	cpi temp2, 14
+	cpi temp2, 0b01010101
 	breq toggle
-	sbi PortB, 6		; turn off bit 6, red led to indicate we got a char, but it's not U
+
 	reti
 
 	
