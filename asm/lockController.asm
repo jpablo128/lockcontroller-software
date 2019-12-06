@@ -1,6 +1,5 @@
 .include "2313def.inc"
 
-; THIS 1ST VERSION of the program just runs the motor in one direction continuously
 
 .def temp =r16
 
@@ -51,8 +50,10 @@ reti			; Analog Comparator vector address (0x000A)
 ; calculations for a clock of 8 MHz  (new test board)
 ; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
 ; for 10 millisecond -> 80 ticks.
+; not working! let's do 100 ticks!
 
-.equ timer_count=0xB0		; -80 = 0xB0
+;.equ timer_count=0xB0		; -80 = 0xB0
+.equ timer_count=0x9C		; -100 = 0x9C
 
 
 reset:
