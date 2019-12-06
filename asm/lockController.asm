@@ -101,8 +101,8 @@ reset:
 	;ldi r16, 39			;9600 baud on a 6.1440 MHz clock
 	out UBRR, r16
 	 
-	;ldi r16, 0b10010000		; enable RXCIE and RXEN 
-	;out UCR, r16
+	ldi r16, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, r16
  
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
