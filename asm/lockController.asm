@@ -90,8 +90,9 @@ reset:
 
 	; set state according to input
 
-	ldi temp, 0b00000011
-	out MCUCR, temp			; set rising edge on int0
+	;ldi temp, 0b00000011	; activate int0 on raising edge
+	ldi temp, 0b00000010	; activate int0 on falling edge
+	out MCUCR, temp			
 	ldi temp, 0b01000000
 	out GIMSK, temp			; enable int0
 
