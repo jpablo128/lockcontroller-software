@@ -335,7 +335,7 @@ end_debounce:
 	ldi temp, 0b10010000		; enable RXCIE and RXEN 
 	out UCR, temp
 
-	sbrc temp2, 2		; if bit 2 of PortD (int0) is still 0, is a valid push
+	sbrs temp2, 2		; if bit 2 of PortD (int0) is 1, is a valid push
 	reti
 	sei
 	rjmp toggle
