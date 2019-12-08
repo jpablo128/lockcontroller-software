@@ -27,33 +27,36 @@
 
 ;.equ nibbles =0b10100101
 
-.org 0x0000		; 
-rjmp reset		; reset vector address (0x0000)
-rjmp toggle		; external interrupt 0 vector address (0x0001
-reti			; external interrupt 1 vector address (0x0002)
-reti			; timer 1 capture event vector address (0x0003)
-reti			; timer 1 compare match vector address (0x0004)
-reti			;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
-rjmp delay_end	;rjmp delay_end	; timer 0 overflow vector address (0x0006)
-rjmp uart_rxd   ; UART Rx Complete vector address (0x0007)
-reti			; UART Data Register Empty vector address (0x0008)
-reti			; UART Tx Complete vector address (0x0009)
-reti			; Analog Comparator vector address (0x000A)
+.org 0x0000			; 
+rjmp reset			; reset vector address (0x0000)
+rjmp start_debounce	; external interrupt 0 vector address (0x0001
+reti				; external interrupt 1 vector address (0x0002)
+reti				; timer 1 capture event vector address (0x0003)
+reti				; timer 1 compare match vector address (0x0004)
+rjmp end_debounce	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
+rjmp delay_end		;rjmp delay_end	; timer 0 overflow vector address (0x0006)
+rjmp uart_rxd   	; UART Rx Complete vector address (0x0007)
+reti				; UART Data Register Empty vector address (0x0008)
+reti				; UART Tx Complete vector address (0x0009)
+reti				; Analog Comparator vector address (0x000A)
 
 
 ; calculations for a clock of 6.1440 MHz
 ; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond.
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
+; for 150ms: 900 ticks
 
-;.equ timer_count=0xC4		; -60 = 0xC4
+;.equ timer_count_10=0xC4		; -60 = 0xC4
+;.equ timer_count_150=0xFC7C		; -900 = 0xFC7C
 
 ; calculations for a clock of 8 MHz  (new test board)
 ; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
 ; for 10 millisecond -> 80 ticks.
-; not working! let's do 100 ticks!
+; for 150 milliseconds: 1200 ticks. We need timer 1 (2 bytes)
 
-;.equ timer_count=0xB0		; -80 = 0xB0
-.equ timer_count=0x9C		; -100 = 0x9C
+
+.equ timer_count_10=0xB0		; -80 = 0xB0
+.equ timer_count_150=0xFB50		; -1200 = 0xFB50
 
 
 reset:
@@ -245,7 +248,7 @@ delay:		; we need a delay after setting each phase of a step.
 	ldi r16, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
 	out TIMSK, r16
 
-	ldi r16, timer_count
+	ldi r16, timer_count_10
 	out TCNT0, r16				; Put counter time in TCNT0 (Timer/Counter 0), start counting
 	rjmp idle
 
@@ -267,11 +270,6 @@ delay_end:		; Timer 0 ISR, the delay finished.
 	out SREG, r16	; restore the status register
 	reti
 
-find_state:
-	nop
-	; if open barrier active, set to open
-	; if closed barrier active, set to closed
-
 
 open:
 	ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
@@ -287,7 +285,6 @@ toggle:
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
 	
-	sei
 	and temp, limitsw
 	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
 
@@ -301,8 +298,47 @@ uart_rxd:
 	reti
 
 	
+start_debounce:
+	; the debounce routine uses timer1, so it doesn't interfere with timer0 (used for motor timing)
+	; disable int0 and uart interrupts
+	ldi temp, 0
+	out GIMSK, temp				; disable int0
+	out UCR, temp				; disable RXCIE  and RXEN in UART
+
+	;delay150:					; we need to use timer1 for this longer delay
+	ldi r16, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
+	out TCCR1B, r16
+
+	in	r16, TIMSK
+	sbr	r16, 128		; set bit 7 of whataver was in TIMSK
+	out TIMSK, r16		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+
+	ldi r16, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
+	out TCNT1H, r16
+	ldi r16, low(timer_count_150)
+	out TCNT1L, r16
+	reti				; continue doing whatever the program was doing
 
 
+end_debounce:
+	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
+	; if int0 (PD1) is 1, it was an invalid push, so restore Z
+	in temp, PortD		; read port D, bit 2 is the switch
+
+	in	r16, TIMSK
+	cbr	r16, 128		; clear bit 7 of whataver was in TIMSK
+	out TIMSK, r16		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
+	
+	; re-enable int0 and uart interrupts
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
+	ldi r16, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, r16
+
+	sbrc temp, 2		; if bit 2 of PortD (int0) is still 0, is a valid push
+	reti
+	sei
+	rjmp toggle
 
 
 
