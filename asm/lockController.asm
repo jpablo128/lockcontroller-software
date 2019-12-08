@@ -93,8 +93,8 @@ reset:
 
 	; set state according to input
 
-	;ldi temp, 0b00000011	; activate int0 on raising edge
-	ldi temp, 0b00000010	; activate int0 on falling edge
+	ldi temp, 0b00000011	; activate int0 on raising edge
+	;ldi temp, 0b00000010	; activate int0 on falling edge
 	out MCUCR, temp			
 	ldi temp, 0b01000000
 	out GIMSK, temp			; enable int0
@@ -309,14 +309,14 @@ start_debounce:
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	in	temp, TIMSK
-	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
-	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
-
 	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
 	out TCNT1H, temp
 	ldi temp, low(timer_count_150)
 	out TCNT1L, temp
+
+	in	temp, TIMSK
+	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
 	reti				; continue doing whatever the program was doing
 
 
