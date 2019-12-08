@@ -323,7 +323,7 @@ start_debounce:
 end_debounce:
 	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
 	; if int0 (PD1) is 1, it was an invalid push, so restore Z
-	in temp2, PortD		; read port D, bit 2 is the switch
+	in temp2, PinD		; read port D pins, bit 2 is the switch
 
 	in	temp, TIMSK
 	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
