@@ -100,12 +100,12 @@ reset:
 	out GIMSK, temp			; enable int0
 
 	; setup uart
-	ldi r16, 51			;9600 baud on an 8 MHz clock
-	;ldi r16, 39			;9600 baud on a 6.1440 MHz clock
-	out UBRR, r16
+	ldi temp, 51			;9600 baud on an 8 MHz clock
+	;ldi temp, 39			;9600 baud on a 6.1440 MHz clock
+	out UBRR, temp
 	 
-	ldi r16, 0b10010000		; enable RXCIE and RXEN 
-	out UCR, r16
+	ldi temp, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, temp
  
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
@@ -242,32 +242,32 @@ endopen:					; here, the lock is completely open. Reset everything and go to idl
 
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
-	ldi r16, 0b00000101			; set prescaler to CK/1024
-	out TCCR0, r16				; Timer/Counter 0 Control Register  
+	ldi temp, 0b00000101			; set prescaler to CK/1024
+	out TCCR0, temp				; Timer/Counter 0 Control Register  
 
-	ldi r16, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
-	out TIMSK, r16
+	ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
+	out TIMSK, temp
 
-	ldi r16, timer_count_10
-	out TCNT0, r16				; Put counter time in TCNT0 (Timer/Counter 0), start counting
+	ldi temp, timer_count_10
+	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 	rjmp idle
 
 
 
 
 delay_end:		; Timer 0 ISR, the delay finished.
-	in r16, SREG	; save the status register
-	push r16		; on the stack
+	in temp, SREG	; save the status register
+	push temp		; on the stack
 
 	; if there's a reason to stop the delay timer, stop it, otherwise it will keep on running.
-	ldi r16, 0
-	out TCCR0, r16		; disable Timer0 
+	ldi temp, 0
+	out TCCR0, temp		; disable Timer0 
 
-	ldi r16, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
-	out TIMSK, r16
+	ldi temp, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
+	out TIMSK, temp
 
-	pop r16			; from the stack
-	out SREG, r16	; restore the status register
+	pop temp		; from the stack
+	out SREG, temp	; restore the status register
 	reti
 
 
@@ -306,36 +306,36 @@ start_debounce:
 	out UCR, temp				; disable RXCIE  and RXEN in UART
 
 	;delay150:					; we need to use timer1 for this longer delay
-	ldi r16, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
-	out TCCR1B, r16
+	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
+	out TCCR1B, temp
 
-	in	r16, TIMSK
-	sbr	r16, 128		; set bit 7 of whataver was in TIMSK
-	out TIMSK, r16		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	in	temp, TIMSK
+	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
 
-	ldi r16, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
-	out TCNT1H, r16
-	ldi r16, low(timer_count_150)
-	out TCNT1L, r16
+	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
+	out TCNT1H, temp
+	ldi temp, low(timer_count_150)
+	out TCNT1L, temp
 	reti				; continue doing whatever the program was doing
 
 
 end_debounce:
 	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
 	; if int0 (PD1) is 1, it was an invalid push, so restore Z
-	in temp, PortD		; read port D, bit 2 is the switch
+	in temp2, PortD		; read port D, bit 2 is the switch
 
-	in	r16, TIMSK
-	cbr	r16, 128		; clear bit 7 of whataver was in TIMSK
-	out TIMSK, r16		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
+	in	temp, TIMSK
+	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
 	
 	; re-enable int0 and uart interrupts
 	ldi temp, 0b01000000
 	out GIMSK, temp			; enable int0
-	ldi r16, 0b10010000		; enable RXCIE and RXEN 
-	out UCR, r16
+	ldi temp, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, temp
 
-	sbrc temp, 2		; if bit 2 of PortD (int0) is still 0, is a valid push
+	sbrc temp2, 2		; if bit 2 of PortD (int0) is still 0, is a valid push
 	reti
 	sei
 	rjmp toggle
