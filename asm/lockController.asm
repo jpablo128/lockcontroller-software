@@ -92,10 +92,8 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	rcall init_btn
-
 	rcall enable_uart
-	
+	rcall init_btn	
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
@@ -106,8 +104,8 @@ reset:
 	sei						; enable global interrupts
 
 	;rjmp ef1
-	rjmp idle;
-	;open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
+	;rjmp idle;
+	rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
 	
 
 idle:
