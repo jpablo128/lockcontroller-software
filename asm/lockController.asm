@@ -97,7 +97,7 @@ reset:
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
-
+	
 	ldi ZL, 0
 	ldi ZH, 0
 
@@ -105,7 +105,9 @@ reset:
 
 	;rjmp ef1
 	;rjmp idle;
-	rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
+	;rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
+	rjmp close		; on start up, let's close...
+
 	
 
 idle:
