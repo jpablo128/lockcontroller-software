@@ -24,6 +24,7 @@
 .def retaddr=r19
 .def limitsw=r20	; limit switch to check for
 .def temp2=r21
+.def btnstatus=r22	; status=0 => being pushed, status=1 => being released
 
 ;.equ nibbles =0b10100101
 
@@ -390,13 +391,14 @@ btn_action:	; a button action happened. Disconnect int0 and wait for bounce to s
 	
 ; NOTE TO-DO: being_pushed and being_released do exacly the same thing!! it should just be 'debounce' 
 being_pushed:	
+	ldi btnstatus, 0
 	rcall disable_btn
 	rcall disable_uart
 	rcall wait4_bounce
 	reti
 
 being_released:
-	;rcall set_btn_up
+	ldi btnstatus, 1
 	rcall disable_btn
 	rcall disable_uart
 	rcall wait4_bounce
@@ -421,13 +423,15 @@ wait4_bounce:	; was delay_150  wait for bounce to stabilize
 check_bounce:			; this was end_debounce, check if the bounce has ended.
 	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
 	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
-	in temp, GIMSK
-	cpi temp, 0
+	;cpi btnstatus 0
+	;in temp, GIMSK
+	;cpi temp, 0
+	cpi btnstatus, 0
 	breq stable_0
 	; here,let's assume that gimsk = 128, so int0 is active
 ; stable_1:
 	in temp2, PinD		; read port D pins, bit 2 is the switch
-	cpi temp2, 1
+	cpi temp2, 4
 	breq bounce_1_ended
 	; bounce did not end, or something weird is going on, just reti
 	reti
