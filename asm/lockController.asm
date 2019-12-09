@@ -29,11 +29,11 @@
 
 .org 0x0000			; 
 rjmp reset			; reset vector address (0x0000)
-rjmp start_debounce	; external interrupt 0 vector address (0x0001
+rjmp btn_action		; external interrupt 0 vector address (0x0001
 reti				; external interrupt 1 vector address (0x0002)
 reti				; timer 1 capture event vector address (0x0003)
 reti				; timer 1 compare match vector address (0x0004)
-rjmp end_debounce	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
+rjmp check_bounce	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
 rjmp delay_end		;rjmp delay_end	; timer 0 overflow vector address (0x0006)
 rjmp uart_rxd   	; UART Rx Complete vector address (0x0007)
 reti				; UART Data Register Empty vector address (0x0008)
@@ -91,22 +91,10 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	; set state according to input
+	rcall init_btn
 
-	ldi temp, 0b00000011	; activate int0 on raising edge
-	;ldi temp, 0b00000010	; activate int0 on falling edge
-	out MCUCR, temp			
-	ldi temp, 0b01000000
-	out GIMSK, temp			; enable int0
-
-	; setup uart
-	ldi temp, 51			;9600 baud on an 8 MHz clock
-	;ldi temp, 39			;9600 baud on a 6.1440 MHz clock
-	out UBRR, temp
-	 
-	ldi temp, 0b10010000		; enable RXCIE and RXEN 
-	out UCR, temp
- 
+	rcall enable_uart
+	
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
@@ -245,8 +233,9 @@ delay:		; we need a delay after setting each phase of a step.
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
 
-	ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
-	out TIMSK, temp
+	rcall enable_timer0
+	;ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
+	;out TIMSK, temp
 
 	ldi temp, timer_count_10
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
@@ -263,8 +252,9 @@ delay_end:		; Timer 0 ISR, the delay finished.
 	ldi temp, 0
 	out TCCR0, temp		; disable Timer0 
 
-	ldi temp, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
-	out TIMSK, temp
+	rcall disable_timer0
+	;ldi temp, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
+	;out TIMSK, temp
 
 	pop temp		; from the stack
 	out SREG, temp	; restore the status register
@@ -298,14 +288,122 @@ uart_rxd:
 	reti
 
 	
-start_debounce:
-	; the debounce routine uses timer1, so it doesn't interfere with timer0 (used for motor timing)
-	; disable int0 and uart interrupts
-	ldi temp, 0
-	out GIMSK, temp				; disable int0
-	out UCR, temp				; disable RXCIE  and RXEN in UART
 
-	;delay150:					; we need to use timer1 for this longer delay
+
+; General routines
+
+; uart routines
+enable_uart:
+	ldi temp, 51			;9600 baud on an 8 MHz clock
+	;ldi temp, 39			;9600 baud on a 6.1440 MHz clock
+	out UBRR, temp
+	 
+	ldi temp, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, temp
+	ret
+ 
+ disable_uart:
+	ldi temp, 0b00000000		; enable RXCIE and RXEN 
+	out UCR, temp
+	ret
+
+
+enable_timer0:
+	in	temp, TIMSK
+	sbr	temp, 2			; set bit 1 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
+	ret	
+
+disable_timer0:
+	in	temp, TIMSK
+	cbr	temp, 2			; clear bit 1 of whataver was in TIMSK
+	out TIMSK, temp		; clear bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
+	ret	
+
+enable_timer1:
+	in	temp, TIMSK
+	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	ret	
+
+disable_timer1:
+	in	temp, TIMSK
+	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; clear bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	ret	
+
+; probable should write enable_int0 and disable_int0
+
+; Push button management code
+; we have a theoretical button state (no need for a variable, can be inferred by the edge setting of int0), and the physical reality.
+; btnstate = 1  button is up, pinD 2 is 1. In this state, the button 'action' we expect is 'press', so int0 needs to look for a falling edge
+; when the falling edge is detected, we disconnect int0 totally, and wait 150ms for the bounce to end, then we check if the button is still pressed
+; that is, pinD 2 is still 0. 
+; If it's not, either the bounce has not finished, or it was a quick, useless press, so we go back to state 'up', look for falling edge, and idle.
+; If pinD 2 is still 0, it's a valid push, so we'll set the state to pushed, and wait a rising edge
+; when the rising edge happens, we disconnect int0, and wait 150ms for the release bounce to end, then we check if the button is still released,
+; than is, pinD 2 is still 1.
+; if it's not, either the release bounce has not finished, or something weird has happened, so we go bakc to state 'down', look for rising edge, and idle.
+; if pinD 2 was still 1, it's a valid release, so we'll set the state to 'up' (1), wait for falling edge. AND DO THE TOGGLE!!
+
+; so basically, if there's a valid push/release cycle, do the toggle.
+; so the toggle is done if:
+;	1- the bounce has really ended
+;	2- the state of the button is released
+; let's disable the UART interrupt while there's a possible button action (restored when the action aborts or ends)
+
+
+set_btn_up:					; set btnstate to 1, int0 to falling edge. This is called for a 'stable' button state, when bounce hase finished.
+	ldi temp, 0b00000010	; activate int0 on falling edge
+	out MCUCR, temp			
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
+	rcall enable_uart
+	ret
+
+set_btn_down:				; set btnstate to 0, int0 to raising edge. This is called for a 'stable' button state, when bounce hase finished.
+	ldi temp, 0b00000011	; activate int0 on raising edge
+	out MCUCR, temp			
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
+	rcall disable_uart
+	ret
+
+disable_btn:
+	ldi temp, 0b00000000
+	out GIMSK, temp			; disable int0
+	ret
+
+btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
+			; if the action happened due to falling edge, the button was up (1) and now it's down (0)
+	in temp, MCUCR
+	andi temp, 0b00000011	; get last 2 bits of MCUCR
+	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
+	breq being_pushed
+	in temp, MCUCR
+	andi temp, 0b00000011	; get last 2 bits of MCUCR
+	cpi temp, 0b00000011	; do they correspond to rising edge (11) ?
+	breq being_released
+	; here, there's an unknown value on the int0 setting, so init things based on the physical status of the button
+	rcall init_btn
+	reti
+	
+; NOTE TO-DO: being_pushed and being_released do exacly the same thing!! it should just be 'debounce' 
+being_pushed:	
+	rcall disable_btn
+	rcall disable_uart
+	rcall wait4_bounce
+	reti
+
+being_released:
+	;rcall set_btn_up
+	rcall disable_btn
+	rcall disable_uart
+	rcall wait4_bounce
+	reti
+
+wait4_bounce:	; was delay_150  wait for bounce to stabilize
+	; need to use timer1 for this longer delay. This won't interfere with timer0 (used for motor timing)
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
@@ -314,34 +412,102 @@ start_debounce:
 	ldi temp, low(timer_count_150)
 	out TCNT1L, temp
 
-	in	temp, TIMSK
-	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
-	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
-	reti				; continue doing whatever the program was doing
+	rcall enable_timer1
+	;in	temp, TIMSK
+	;sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+	;out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	ret	
 
-
-end_debounce:
-	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
-	; if int0 (PD1) is 1, it was an invalid push, so restore Z
+check_bounce:			; this was end_debounce, check if the bounce has ended.
+	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
+	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
+	in temp, GIMSK
+	cpi temp, 0
+	breq stable_0
+	; here,let's assume that gimsk = 128, so int0 is active
+; stable_1:
 	in temp2, PinD		; read port D pins, bit 2 is the switch
-
-	in	temp, TIMSK
-	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
-	out TIMSK, temp		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
-	
-	; re-enable int0 and uart interrupts
-	ldi temp, 0b01000000
-	out GIMSK, temp			; enable int0
-	ldi temp, 0b10010000		; enable RXCIE and RXEN 
-	out UCR, temp
-
-	sbrs temp2, 2		; if bit 2 of PortD (int0) is 1, is a valid push
+	cpi temp2, 1
+	breq bounce_1_ended
+	; bounce did not end, or something weird is going on, just reti
 	reti
-	sei
+stable_0:
+	in temp2, PinD		; read port D pins, bit 2 is the switch
+	cpi temp2, 0
+	breq bounce_0_ended
+	; bounce did not end, or something weird is going on, just reti
+	reti
+
+bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
+	rcall disable_timer1
+	rcall set_btn_down
+	reti
+
+bounce_1_ended:
+	rcall disable_timer1
+	rcall set_btn_up
+	; when the bounce up ends, we DO THE TOGGLE
+	sei				; enable global interrupts, since we're not using reti here
 	rjmp toggle
 
 
+init_btn:					;initialize int0 etc. based on the physical state of the button, read PinD2, and set status according to pin
+	in temp, PinD
+	andi temp, 0b00000100	; get bit 2 of pinD
+	cpi temp, 0b00000100	; is bit 2 set?
+	breq btn_is_up			; if so, button is (physically) up
+	;otherwise, the button is (physically) down
+	rcall set_btn_down
+	ret
 
-; NEXT STEPS:
-; - light up leds according to state/action.
-; - UART interrupt: receive an Open, Close or Toggle command through the serial port (in the future, through Bluetooth)
+btn_is_up:
+	rcall set_btn_up
+	ret
+
+
+
+
+
+
+
+;start_debounce:
+	; the debounce routine uses timer1, so it doesn't interfere with timer0 (used for motor timing)
+	; disable int0 and uart interrupts
+;	ldi temp, 0
+;	out GIMSK, temp				; disable int0
+;	out UCR, temp				; disable RXCIE  and RXEN in UART
+
+	;delay150:					; we need to use timer1 for this longer delay
+;	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
+;	out TCCR1B, temp
+
+;	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
+;	out TCNT1H, temp
+;	ldi temp, low(timer_count_150)
+;	out TCNT1L, temp
+;
+;	in	temp, TIMSK
+;	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+;	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+;	reti				; continue doing whatever the program was doing
+
+
+;end_debounce:
+	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
+	; if int0 (PD1) is 1, it was an invalid push, so restore Z
+;	in temp2, PinD		; read port D pins, bit 2 is the switch
+
+;	in	temp, TIMSK
+;	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
+;	out TIMSK, temp		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
+	
+	; re-enable int0 and uart interrupts
+;	ldi temp, 0b01000000
+;	out GIMSK, temp			; enable int0
+;	ldi temp, 0b10010000		; enable RXCIE and RXEN 
+;	out UCR, temp
+
+;	sbrs temp2, 2		; if bit 2 of PortD (int0) is 1, is a valid push
+;	reti
+;	sei
+;	rjmp toggle
