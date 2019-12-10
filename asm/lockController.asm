@@ -258,7 +258,7 @@ close:
 toggle:
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
-	;sei						; this sei here is vital!!
+	sei						; this sei here is vital!!
 	and temp, limitsw
 	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
 
