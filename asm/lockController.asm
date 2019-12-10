@@ -53,8 +53,7 @@ reti				; Analog Comparator vector address (0x000A)
 
 
 .equ timer_count_10=0xB0		; -80 = 0xB0
-;.equ timer_count_20=0x60		; -160 = 0x60
-.equ timer_count_20=0x00		; HIGHT TEST VALUE
+.equ timer_count_20=0x60		; -160 = 0x60
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
 
@@ -132,7 +131,8 @@ step:
 	;sbi PortB, 4	; enable L293D
 
 sf1:
-	ldi coilbits, 0b00000011
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000001
 	rcall set_coils
 	;cbi PortB, 3		; turn off bit 3
 	;cbi PortB, 2		; turn off bit 2
@@ -143,7 +143,8 @@ sf1:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sf2:
-	ldi coilbits, 0b00000110
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b00000010
 	rcall set_coils
 	;cbi PortB, 0		; turn off bit 0
 	;sbi PortB, 2		; turn on bit 2
@@ -152,7 +153,8 @@ sf2:
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf3:
-	ldi coilbits, 0b00001100
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00000100
 	rcall set_coils
 	;cbi PortB, 1		; turn off bit 1
 	;sbi PortB, 3		; turn on bit 3
@@ -161,7 +163,8 @@ sf3:
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf4:
-	ldi coilbits, 0b00001001
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00001000
 	rcall set_coils
 	;cbi PortB, 2		; turn off bit 2
 	;sbi PortB, 0		; turn on bit 0
@@ -185,7 +188,8 @@ endclose:					; here, the lock is completely open. Reset everything and go to id
 
 
 sb1:
-	ldi coilbits, 0b00001001
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00001000
 	rcall set_coils
 	;sbi PortB, 3		; turn on bit 3
 	;cbi PortB, 2		; turn off bit 2
@@ -196,7 +200,8 @@ sb1:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb2:
-	ldi coilbits, 0b00001100
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00000100
 	rcall set_coils
 	;cbi PortB, 0		; turn off bit 0
 	;sbi PortB, 2		; turn on bit 2
@@ -205,7 +210,8 @@ sb2:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb3:
-	ldi coilbits, 0b00000110
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b00000010
 	rcall set_coils
 	;cbi PortB, 3		; turn off bit 3
 	;sbi PortB, 1		; turn on bit 1
@@ -214,7 +220,8 @@ sb3:
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb4:
-	ldi coilbits, 0b00000011
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000001
 	rcall set_coils
 	;cbi PortB, 2		; turn off bit 2
 	;sbi PortB, 0		; turn on bit 0
@@ -245,29 +252,14 @@ set_coils:				; set the coils to a given polarization. The parameter is passed t
 
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
-
 	rcall start_timer0
-	;ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
-	;out TIMSK, temp
-
-
 	rjmp idle
-
-
 
 
 delay_end:		; Timer 0 ISR, the delay finished.
 	in temp, SREG	; save the status register
 	push temp		; on the stack
-
-	; if there's a reason to stop the delay timer, stop it, otherwise it will keep on running.
-	ldi temp, 0
-	out TCCR0, temp		; disable Timer0 
-
 	rcall stop_timer0
-	;ldi temp, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
-	;out TIMSK, temp
-
 	pop temp		; from the stack
 	out SREG, temp	; restore the status register
 	reti
@@ -327,7 +319,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_20
+	ldi temp, timer_count_10
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
