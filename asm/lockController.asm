@@ -214,15 +214,12 @@ endopen:					; here, the lock is completely open. Reset everything and go to idl
 
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
-	ldi temp, 0b00000101			; set prescaler to CK/1024
-	out TCCR0, temp				; Timer/Counter 0 Control Register  
 
 	rcall enable_timer0
 	;ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
 	;out TIMSK, temp
 
-	ldi temp, timer_count_10
-	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
+
 	rjmp idle
 
 
@@ -292,6 +289,11 @@ disable_uart:
 
 
 enable_timer0:
+	ldi temp, 0b00000101			; set prescaler to CK/1024
+	out TCCR0, temp				; Timer/Counter 0 Control Register  
+	ldi temp, timer_count_10
+	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
+
 	in	temp, TIMSK
 	sbr	temp, 2			; set bit 1 of whataver was in TIMSK
 	out TIMSK, temp		; set bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
