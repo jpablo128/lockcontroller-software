@@ -38,7 +38,7 @@ reti				; Analog Comparator vector address (0x000A)
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
 ; for 150ms: 900 ticks
 
-;.equ timer_count_10=0xC4		; -60 = 0xC4
+;.equ timer_count_10	=0xC4		; -60 = 0xC4
 ;.equ timer_count_20=0x88		; -120 = 0x88
 ;.equ timer_count_150=0xFC7C		; -900 = 0xFC7C
 ;.equ timer_count_250=0xFC7C		; -900 = 0xFC7C
@@ -167,6 +167,9 @@ sfe:
 endclose:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
+	ldi temp, PortB
+	andi temp, 0b11110000
+	out PortB, temp			; turn off all coils
 	rjmp idle
 
 
@@ -210,6 +213,9 @@ sbe:
 endopen:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
+	ldi temp, PortB
+	andi temp, 0b11110000
+	out PortB, temp			; turn off all coils
 	rjmp idle
 
 
