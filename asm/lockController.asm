@@ -319,7 +319,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_10
+	ldi temp, timer_count_20
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
