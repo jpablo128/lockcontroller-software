@@ -85,8 +85,9 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	rcall enable_uart
-	rcall init_btn	
+	;rcall enable_uart
+	;rcall init_btn	
+	rcall set_btn_up
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
@@ -257,7 +258,7 @@ close:
 toggle:
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
-	sei						; this sei here is vital!!
+	;sei						; this sei here is vital!!
 	and temp, limitsw
 	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
 
@@ -284,8 +285,8 @@ enable_uart:
 	out UCR, temp
 	ret
  
- disable_uart:
-	ldi temp, 0b00000000		; enable RXCIE and RXEN 
+disable_uart:
+	ldi temp, 0b00000000		; disable RXCIE and RXEN 
 	out UCR, temp
 	ret
 
