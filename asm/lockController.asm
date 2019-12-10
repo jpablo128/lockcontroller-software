@@ -3,15 +3,6 @@
 
 .def temp =r16
 
-; Maybe we don't really need a 'state' control... just looking at the IR inputs may be enough?
-.def state=r17		; current state of the system: bits 2, 1 and 0:
-					; 001 -> lock closed
-					; 010 -> lock opened
-					; 101 -> closing lock
-					; 110 -> opening lock
-					; 111 -> undetermined or changing state
-					; bits 5, 4 and 3 are the 'previous' state
-
 .def outctrl=r18	; outcontrol will have the value to output on port b. It controls the motor, both L293D enable pins, and the leds.
 					; bits 3, 2, 1, and 0: control the motor (values 1, 2, 4, 8)
 					; bit 4 enables/disables the L293D
@@ -49,15 +40,18 @@ reti				; Analog Comparator vector address (0x000A)
 
 ;.equ timer_count_10=0xC4		; -60 = 0xC4
 ;.equ timer_count_150=0xFC7C		; -900 = 0xFC7C
+;.equ timer_count_250=0xFC7C		; -900 = 0xFC7C
 
 ; calculations for a clock of 8 MHz  (new test board)
 ; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
 ; for 10 millisecond -> 80 ticks.
 ; for 150 milliseconds: 1200 ticks. We need timer 1 (2 bytes)
+; for 250 milliseconds: 2000 ticks. We need timer 1 (2 bytes)
 
 
 .equ timer_count_10=0xB0		; -80 = 0xB0
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
+.equ timer_count_250=0xFF06		; -2000 = 0xFF06
 
 
 reset:
@@ -79,7 +73,6 @@ reset:
 
 	; set port B as output
 
-	ldi state, 0b00000111	; set state to unknown
 	ser temp
 	out DDRB,temp		; Set port B direction out
 	clr outctrl			; set r18 to 0b00000000
@@ -105,23 +98,12 @@ reset:
 
 	;rjmp ef1
 	;rjmp idle;
-	;rjmp open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
-	rjmp close		; on start up, let's close...
+	;rjmp open		; on start up, let's just open the lock... to see... the motor stalls
+	rjmp close		; on start up, let's close.... it doesn't stall
 
 	
 
 idle:
-	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
-	; if timer 0 is on, we're still in a delay, so let's continue idling
-	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
-	in temp, TIMSK
-	sbrc temp, 1		; if bit 1 of TIMSK is cleared,it means that timer 0 is off
-	rjmp idle
-	cpi	ZL, 0			; compare return address with 0
-	breq idle			; is not 0, loop again
-	ijmp				; it is 0, do an indirect jump (address in Z register).
-
-
 	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
 	; if timer 0 is on, we're still in a delay, so let's continue idling
 	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
@@ -409,9 +391,9 @@ wait4_bounce:	; was delay_150  wait for bounce to stabilize
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
+	ldi temp, high(timer_count_250)	;load timer 1 register (TCNT1) with timer_count_150
 	out TCNT1H, temp
-	ldi temp, low(timer_count_150)
+	ldi temp, low(timer_count_250)
 	out TCNT1L, temp
 
 	rcall enable_timer1
