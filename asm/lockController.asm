@@ -98,9 +98,9 @@ reset:
 	sei						; enable global interrupts
 
 	;rjmp ef1
-	;rjmp idle;
+	rjmp idle;
 	;rjmp open		; on start up, let's just open the lock... to see... the motor stalls
-	rjmp close		; on start up, let's close.... it doesn't stall
+	;rjmp close		; on start up, let's close.... it doesn't stall
 
 	
 
