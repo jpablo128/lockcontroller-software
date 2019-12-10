@@ -39,6 +39,7 @@ reti				; Analog Comparator vector address (0x000A)
 ; for 150ms: 900 ticks
 
 ;.equ timer_count_10=0xC4		; -60 = 0xC4
+;.equ timer_count_20=0x88		; -120 = 0x88
 ;.equ timer_count_150=0xFC7C		; -900 = 0xFC7C
 ;.equ timer_count_250=0xFC7C		; -900 = 0xFC7C
 
@@ -50,6 +51,7 @@ reti				; Analog Comparator vector address (0x000A)
 
 
 .equ timer_count_10=0xB0		; -80 = 0xB0
+.equ timer_count_20=0x88		; -80 = 0x88
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
 
@@ -151,7 +153,7 @@ sf3:
 	
 sf4:
 	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 0		; turn on bit 4
+	sbi PortB, 0		; turn on bit 0
 	ldi ZL, low(sfe)	; save the return address
 	ldi ZH, high(sfe)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -296,7 +298,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_10
+	ldi temp, timer_count_20
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
@@ -314,9 +316,9 @@ start_timer1:
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
+	ldi temp, high(timer_count_250)	;load timer 1 register (TCNT1) with timer_count_250
 	out TCNT1H, temp
-	ldi temp, low(timer_count_150)
+	ldi temp, low(timer_count_250)
 	out TCNT1L, temp
 
 	in	temp, TIMSK
