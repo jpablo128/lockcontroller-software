@@ -189,7 +189,7 @@ endclose:					; here, the lock is completely open. Reset everything and go to id
 
 sb1:
 	;ldi coilbits, 0b00001001
-	ldi coilbits, 0b00001000
+	ldi coilbits, 0b00000001
 	rcall set_coils
 	;sbi PortB, 3		; turn on bit 3
 	;cbi PortB, 2		; turn off bit 2
@@ -201,7 +201,7 @@ sb1:
 
 sb2:
 	;ldi coilbits, 0b00001100
-	ldi coilbits, 0b00000100
+	ldi coilbits, 0b00001000
 	rcall set_coils
 	;cbi PortB, 0		; turn off bit 0
 	;sbi PortB, 2		; turn on bit 2
@@ -211,7 +211,7 @@ sb2:
 
 sb3:
 	;ldi coilbits, 0b00000110
-	ldi coilbits, 0b00000010
+	ldi coilbits, 0b00000100
 	rcall set_coils
 	;cbi PortB, 3		; turn off bit 3
 	;sbi PortB, 1		; turn on bit 1
@@ -221,7 +221,7 @@ sb3:
 
 sb4:
 	;ldi coilbits, 0b00000011
-	ldi coilbits, 0b00000001
+	ldi coilbits, 0b00000010
 	rcall set_coils
 	;cbi PortB, 2		; turn off bit 2
 	;sbi PortB, 0		; turn on bit 0
