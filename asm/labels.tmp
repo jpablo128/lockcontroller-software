@@ -20,11 +20,11 @@
  </OUTPUT_FILES>
  <LABELS>
   <reset><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>57</LINE></reset>
-  <btn_action><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>360</LINE></btn_action>
-  <check_bounce><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>406</LINE></check_bounce>
+  <btn_action><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>368</LINE></btn_action>
+  <check_bounce><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>407</LINE></check_bounce>
   <delay_end><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>231</LINE></delay_end>
   <uart_rxd><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>267</LINE></uart_rxd>
-  <set_btn_up><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>339</LINE></set_btn_up>
+  <set_btn_up><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>347</LINE></set_btn_up>
   <idle><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>107</LINE></idle>
   <step><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>124</LINE></step>
   <sf1><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>129</LINE></sf1>
@@ -48,16 +48,16 @@
   <enable_uart><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>279</LINE></enable_uart>
   <disable_uart><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>288</LINE></disable_uart>
   <enable_timer1><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>306</LINE></enable_timer1>
-  <disable_timer1><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>312</LINE></disable_timer1>
-  <set_btn_down><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>347</LINE></set_btn_down>
-  <disable_btn><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>355</LINE></disable_btn>
-  <being_pushed><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>376</LINE></being_pushed>
-  <being_released><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>383</LINE></being_released>
-  <init_btn><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>441</LINE></init_btn>
-  <wait4_bounce><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>390</LINE></wait4_bounce>
-  <stable_0><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>421</LINE></stable_0>
-  <bounce_1_ended><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>433</LINE></bounce_1_ended>
-  <bounce_0_ended><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>428</LINE></bounce_0_ended>
-  <btn_is_up><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>450</LINE></btn_is_up>
+  <disable_timer1><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>320</LINE></disable_timer1>
+  <set_btn_down><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>355</LINE></set_btn_down>
+  <disable_btn><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>363</LINE></disable_btn>
+  <being_pushed><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>384</LINE></being_pushed>
+  <being_released><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>391</LINE></being_released>
+  <init_btn><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>442</LINE></init_btn>
+  <wait4_bounce><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>398</LINE></wait4_bounce>
+  <stable_0><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>422</LINE></stable_0>
+  <bounce_1_ended><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>434</LINE></bounce_1_ended>
+  <bounce_0_ended><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>429</LINE></bounce_0_ended>
+  <btn_is_up><FILE>C:\Users\pablo\Documents\avrProjects\lockController\asm\lockController.asm</FILE><LINE>451</LINE></btn_is_up>
  </LABELS>
 </ASSEMBLER_INFO>
