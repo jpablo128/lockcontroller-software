@@ -25,7 +25,7 @@ rjmp btn_action		; external interrupt 0 vector address (0x0001
 reti				; external interrupt 1 vector address (0x0002)
 reti				; timer 1 capture event vector address (0x0003)
 reti				; timer 1 compare match vector address (0x0004)
-rjmp check_bounce	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
+rjmp reactivate_btn	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
 rjmp delay_end		;rjmp delay_end	; timer 0 overflow vector address (0x0006)
 rjmp uart_rxd   	; UART Rx Complete vector address (0x0007)
 reti				; UART Data Register Empty vector address (0x0008)
@@ -385,40 +385,46 @@ btn_action:	; a button action happened. Disconnect int0 and wait for bounce to s
 	reti
 
 
-check_bounce:	
+reactivate_btn:	
+		rcall stop_timer1
+		rcall set_btn_up
+		sei
+		rjmp toggle
+
+;check_bounce:	
 	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
 	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
 ;check_falling
-	in temp, MCUCR
-	andi temp, 0b00000011	; get last 2 bits of MCUCR
-	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
-	;breq stable_0
-	brne is_rising
-	; here, we were on falling edge, so the stable value is 0
-	in temp2, PinD		; read port D pins, bit 2 is the switch
-	andi temp2, 4		; ; vital! isolate bit 2!
-	cpi temp2, 0
-	breq bounce_0_ended
-	; bounce did not end, or something weird is going on, just reti
-	reti
-	bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
-		rcall stop_timer1
-		rcall set_btn_down
-		reti
+;	in temp, MCUCR
+;	andi temp, 0b00000011	; get last 2 bits of MCUCR
+;	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
+;	;breq stable_0
+;	brne is_rising
+;	; here, we were on falling edge, so the stable value is 0
+;	in temp2, PinD		; read port D pins, bit 2 is the switch
+;	andi temp2, 4		; ; vital! isolate bit 2!
+;	cpi temp2, 0
+;	breq bounce_0_ended
+;	; bounce did not end, or something weird is going on, just reti
+;	reti
+;	bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
+;		rcall stop_timer1
+;		rcall set_btn_down
+;		reti
 	
-is_rising:		;so the stable value is 1
-	in temp2, PinD		; read port D pins, bit 2 is the switch
-	andi temp2, 4		; vital! isolate bit 2!
-	cpi temp2, 4
-	breq bounce_1_ended
-	; bounce did not end, or something weird is going on, just reti
-	reti
+;is_rising:		;so the stable value is 1
+;	in temp2, PinD		; read port D pins, bit 2 is the switch
+;	andi temp2, 4		; vital! isolate bit 2!
+;	cpi temp2, 4
+;	breq bounce_1_ended
+;	; bounce did not end, or something weird is going on, just reti
+;	reti
 
-	bounce_1_ended:
-		rcall stop_timer1
-		rcall set_btn_up
-		; when the bounce up ends, we DO THE TOGGLE
-		sei				; enable global interrupts, since we're not using reti here
+;	bounce_1_ended:
+;		rcall stop_timer1
+;		rcall set_btn_up
+;		; when the bounce up ends, we DO THE TOGGLE
+;		sei				; enable global interrupts, since we're not using reti here
 		rjmp toggle
 
 
