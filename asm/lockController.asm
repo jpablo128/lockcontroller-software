@@ -215,7 +215,7 @@ endopen:					; here, the lock is completely open. Reset everything and go to idl
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
 
-	rcall enable_timer0
+	rcall start_timer0
 	;ldi temp, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
 	;out TIMSK, temp
 
@@ -233,7 +233,7 @@ delay_end:		; Timer 0 ISR, the delay finished.
 	ldi temp, 0
 	out TCCR0, temp		; disable Timer0 
 
-	rcall disable_timer0
+	rcall stop_timer0
 	;ldi temp, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
 	;out TIMSK, temp
 
@@ -262,9 +262,14 @@ toggle:
 	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
 
 uart_rxd:
+	in temp, SREG	; save the status register
+	push temp		; on the stack
+
 	in temp2, UDR 
 	cpi temp2, 0b01010101
 	breq toggle
+	pop temp		; from the stack
+	out SREG, temp	; restore the status register
 	reti
 
 	
@@ -288,7 +293,7 @@ disable_uart:
 	ret
 
 
-enable_timer0:
+start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
 	ldi temp, timer_count_10
@@ -299,13 +304,13 @@ enable_timer0:
 	out TIMSK, temp		; set bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
 	ret	
 
-disable_timer0:
+stop_timer0:
 	in	temp, TIMSK
 	cbr	temp, 2			; clear bit 1 of whataver was in TIMSK
 	out TIMSK, temp		; clear bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
 	ret	
 
-enable_timer1:
+start_timer1:
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
@@ -319,7 +324,7 @@ enable_timer1:
 	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
 	ret	
 
-disable_timer1:
+stop_timer1:
 	in	temp, TIMSK
 	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
 	out TIMSK, temp		; clear bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
@@ -368,79 +373,53 @@ disable_btn:
 	ret
 
 btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
-			; if the action happened due to falling edge, the button was up (1) and now it's down (0)
+	in temp, SREG	; save the status register
+	push temp		; on the stack
+
+	rcall disable_btn
+	rcall disable_uart
+	rcall start_timer1
+
+	pop temp		; from the stack
+	out SREG, temp	; restore the status register
+	reti
+
+
+check_bounce:	
+	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
+	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
+;check_falling
 	in temp, MCUCR
 	andi temp, 0b00000011	; get last 2 bits of MCUCR
 	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
-	breq being_pushed
-	in temp, MCUCR
-	andi temp, 0b00000011	; get last 2 bits of MCUCR
-	cpi temp, 0b00000011	; do they correspond to rising edge (11) ?
-	breq being_released
-
-	; here, there's an unknown value on the int0 setting, so init things based on the physical status of the button
-	rcall init_btn
-	reti
-	
-; NOTE TO-DO: being_pushed and being_released do exacly the same thing!! it should just be 'debounce' 
-being_pushed:	
-	ldi btnstatus, 0
-	rcall disable_btn
-	rcall disable_uart
-	rcall wait4_bounce
-	reti
-
-being_released:
-	ldi btnstatus, 1
-	rcall disable_btn
-	rcall disable_uart
-	rcall wait4_bounce
-	reti
-
-wait4_bounce:	; was delay_150  wait for bounce to stabilize
-	; need to use timer1 for this longer delay. This won't interfere with timer0 (used for motor timing)
-	
-	rcall enable_timer1
-	;in	temp, TIMSK
-	;sbr	temp, 128		; set bit 7 of whataver was in TIMSK
-	;out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
-	ret	
-
-check_bounce:			; this was end_debounce, check if the bounce has ended.
-	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
-	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
-	;cpi btnstatus 0
-	;in temp, GIMSK
-	;cpi temp, 0
-	cpi btnstatus, 0
-	breq stable_0
-	; here,let's assume that gimsk = 128, so int0 is active
-; stable_1:
-	in temp2, PinD		; read port D pins, bit 2 is the switch
-	andi temp2, 4		; vital! isolate bit 2!
-	cpi temp2, 4
-	breq bounce_1_ended
-	; bounce did not end, or something weird is going on, just reti
-	reti
-stable_0:
+	;breq stable_0
+	brne is_rising
+	; here, we were on falling edge, so the stable value is 0
 	in temp2, PinD		; read port D pins, bit 2 is the switch
 	andi temp2, 4		; ; vital! isolate bit 2!
 	cpi temp2, 0
 	breq bounce_0_ended
 	; bounce did not end, or something weird is going on, just reti
 	reti
-
-bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
-	rcall disable_timer1
-	rcall set_btn_down
+	bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
+		rcall stop_timer1
+		rcall set_btn_down
+		reti
+	
+is_rising:		;so the stable value is 1
+	in temp2, PinD		; read port D pins, bit 2 is the switch
+	andi temp2, 4		; vital! isolate bit 2!
+	cpi temp2, 4
+	breq bounce_1_ended
+	; bounce did not end, or something weird is going on, just reti
 	reti
 
-bounce_1_ended:
-	rcall disable_timer1
-	rcall set_btn_up
-	; when the bounce up ends, we DO THE TOGGLE
-	sei				; enable global interrupts, since we're not using reti here
-	rjmp toggle
+	bounce_1_ended:
+		rcall stop_timer1
+		rcall set_btn_up
+		; when the bounce up ends, we DO THE TOGGLE
+		sei				; enable global interrupts, since we're not using reti here
+		rjmp toggle
 
 
 init_btn:					;initialize int0 etc. based on the physical state of the button, read PinD2, and set status according to pin
@@ -503,3 +482,44 @@ btn_is_up:
 ;	reti
 ;	sei
 ;	rjmp toggle
+
+
+;btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
+;			; if the action happened due to falling edge, the button was up (1) and now it's down (0)
+;	in temp, SREG	; save the status register
+;	push temp		; on the stack
+;
+;	in temp, MCUCR
+;	andi temp, 0b00000011	; get last 2 bits of MCUCR
+;	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
+;	breq being_pushed
+;	in temp, MCUCR
+;	andi temp, 0b00000011	; get last 2 bits of MCUCR
+;	cpi temp, 0b00000011	; do they correspond to rising edge (11) ?
+;	breq being_released
+
+	; here, there's an unknown value on the int0 setting, so init things based on the physical status of the button
+;	rcall init_btn
+
+;	pop temp		; from the stack
+;	out SREG, temp	; restore the status register
+;	reti
+	
+
+;	being_pushed:	
+;		ldi btnstatus, 0
+;		rcall disable_btn
+;		rcall disable_uart
+;		rcall wait4_bounce
+;		pop temp		; from the stack
+;		out SREG, temp	; restore the status register
+;		reti
+
+;	being_released:
+;		ldi btnstatus, 1
+;		rcall disable_btn
+;		rcall disable_uart
+;		rcall wait4_bounce
+;		pop temp		; from the stack
+;		out SREG, temp	; restore the status register
+;		reti
