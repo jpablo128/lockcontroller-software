@@ -134,10 +134,6 @@ sf1:
 	;ldi coilbits, 0b00000011
 	ldi coilbits, 0b00000001
 	rcall set_coils
-	;cbi PortB, 3		; turn off bit 3
-	;cbi PortB, 2		; turn off bit 2
-	;sbi PortB, 1		; turn on bit 1
-	;sbi PortB, 0		; turn on bit 0
 	ldi ZL, low(sf2)	; save the return address
 	ldi ZH, high(sf2)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -146,8 +142,6 @@ sf2:
 	;ldi coilbits, 0b00000110
 	ldi coilbits, 0b00000010
 	rcall set_coils
-	;cbi PortB, 0		; turn off bit 0
-	;sbi PortB, 2		; turn on bit 2
 	ldi ZL, low(sf3)	; save the return address
 	ldi ZH, high(sf3)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -156,8 +150,6 @@ sf3:
 	;ldi coilbits, 0b00001100
 	ldi coilbits, 0b00000100
 	rcall set_coils
-	;cbi PortB, 1		; turn off bit 1
-	;sbi PortB, 3		; turn on bit 3
 	ldi ZL, low(sf4)	; save the return address
 	ldi ZH, high(sf4)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -166,8 +158,6 @@ sf4:
 	;ldi coilbits, 0b00001001
 	ldi coilbits, 0b00001000
 	rcall set_coils
-	;cbi PortB, 2		; turn off bit 2
-	;sbi PortB, 0		; turn on bit 0
 	ldi ZL, low(sfe)	; save the return address
 	ldi ZH, high(sfe)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -181,7 +171,7 @@ sfe:
 endclose:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
-	ldi coilbits, 0b00000000
+	;ldi coilbits, 0b00000000
 	rcall set_coils
 	rjmp idle
 
@@ -191,10 +181,6 @@ sb1:
 	;ldi coilbits, 0b00001001
 	ldi coilbits, 0b00000001
 	rcall set_coils
-	;sbi PortB, 3		; turn on bit 3
-	;cbi PortB, 2		; turn off bit 2
-	;cbi PortB, 1		; turn off bit 1
-	;sbi PortB, 0		; turn on bit 0
 	ldi ZL, low(sb2)	; save the return address
 	ldi ZH, high(sb2)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -203,8 +189,6 @@ sb2:
 	;ldi coilbits, 0b00001100
 	ldi coilbits, 0b00001000
 	rcall set_coils
-	;cbi PortB, 0		; turn off bit 0
-	;sbi PortB, 2		; turn on bit 2
 	ldi ZL, low(sb3)	; save the return address
 	ldi ZH, high(sb3)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -213,8 +197,6 @@ sb3:
 	;ldi coilbits, 0b00000110
 	ldi coilbits, 0b00000100
 	rcall set_coils
-	;cbi PortB, 3		; turn off bit 3
-	;sbi PortB, 1		; turn on bit 1
 	ldi ZL, low(sb4)	; save the return address
 	ldi ZH, high(sb4)	
 	rjmp delay			; JUMP!! call delay 10ms
@@ -223,8 +205,6 @@ sb4:
 	;ldi coilbits, 0b00000011
 	ldi coilbits, 0b00000010
 	rcall set_coils
-	;cbi PortB, 2		; turn off bit 2
-	;sbi PortB, 0		; turn on bit 0
 	ldi ZL, low(sbe)	; save the return address
 	ldi ZH, high(sbe)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -238,7 +218,7 @@ sbe:
 endopen:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
-	ldi coilbits, 0b00000000
+	;ldi coilbits, 0b00000000
 	rcall set_coils
 	rjmp idle
 
