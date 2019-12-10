@@ -257,7 +257,7 @@ close:
 toggle:
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
-	
+	sei						; this sei here is vital!!
 	and temp, limitsw
 	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
 
@@ -267,7 +267,6 @@ uart_rxd:
 	in temp2, UDR 
 	cpi temp2, 0b01010101
 	breq toggle
-
 	reti
 
 	
@@ -345,7 +344,7 @@ set_btn_up:					; set btnstate to 1, int0 to falling edge. This is called for a 
 	ret
 
 set_btn_down:				; set btnstate to 0, int0 to raising edge. This is called for a 'stable' button state, when bounce hase finished.
-	ldi temp, 0b00000011	; activate int0 on raising edge
+	ldi temp, 0b00000011	; activate int0 on rising edge
 	out MCUCR, temp			
 	ldi temp, 0b01000000
 	out GIMSK, temp			; enable int0
@@ -367,6 +366,7 @@ btn_action:	; a button action happened. Disconnect int0 and wait for bounce to s
 	andi temp, 0b00000011	; get last 2 bits of MCUCR
 	cpi temp, 0b00000011	; do they correspond to rising edge (11) ?
 	breq being_released
+
 	; here, there's an unknown value on the int0 setting, so init things based on the physical status of the button
 	rcall init_btn
 	reti
@@ -391,9 +391,9 @@ wait4_bounce:	; was delay_150  wait for bounce to stabilize
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	ldi temp, high(timer_count_250)	;load timer 1 register (TCNT1) with timer_count_150
+	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
 	out TCNT1H, temp
-	ldi temp, low(timer_count_250)
+	ldi temp, low(timer_count_150)
 	out TCNT1L, temp
 
 	rcall enable_timer1
