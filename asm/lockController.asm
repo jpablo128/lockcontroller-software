@@ -53,7 +53,8 @@ reti				; Analog Comparator vector address (0x000A)
 
 
 .equ timer_count_10=0xB0		; -80 = 0xB0
-.equ timer_count_20=0x60		; -160 = 0x60
+;.equ timer_count_20=0x60		; -160 = 0x60
+.equ timer_count_20=0x00		; HIGHT TEST VALUE
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
 
