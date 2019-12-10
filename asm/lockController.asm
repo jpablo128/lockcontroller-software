@@ -21,7 +21,7 @@
 
 .org 0x0000			; 
 rjmp reset			; reset vector address (0x0000)
-rjmp btn_action		; external interrupt 0 vector address (0x0001
+reti ;rjmp btn_action		; external interrupt 0 vector address (0x0001
 reti				; external interrupt 1 vector address (0x0002)
 reti				; timer 1 capture event vector address (0x0003)
 reti				; timer 1 compare match vector address (0x0004)
@@ -85,9 +85,9 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	;rcall enable_uart
+	rcall enable_uart
 	;rcall init_btn	
-	rcall set_btn_up
+	;rcall set_btn_up
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
