@@ -417,12 +417,14 @@ check_bounce:			; this was end_debounce, check if the bounce has ended.
 	; here,let's assume that gimsk = 128, so int0 is active
 ; stable_1:
 	in temp2, PinD		; read port D pins, bit 2 is the switch
+	andi temp2, 4		; vital! isolate bit 2!
 	cpi temp2, 4
 	breq bounce_1_ended
 	; bounce did not end, or something weird is going on, just reti
 	reti
 stable_0:
 	in temp2, PinD		; read port D pins, bit 2 is the switch
+	andi temp2, 4		; ; vital! isolate bit 2!
 	cpi temp2, 0
 	breq bounce_0_ended
 	; bounce did not end, or something weird is going on, just reti
