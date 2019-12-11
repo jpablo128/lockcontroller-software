@@ -26,7 +26,7 @@ rjmp btn_action		; external interrupt 0 vector address (0x0001
 reti				; external interrupt 1 vector address (0x0002)
 reti				; timer 1 capture event vector address (0x0003)
 reti				; timer 1 compare match vector address (0x0004)
-rjmp reactivate_btn	;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
+rjmp timer1_ovf		;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
 rjmp delay_end		;rjmp delay_end	; timer 0 overflow vector address (0x0006)
 rjmp uart_rxd   	; UART Rx Complete vector address (0x0007)
 reti				; UART Data Register Empty vector address (0x0008)
@@ -322,9 +322,9 @@ start_timer1:
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	ldi temp, high(timer_count_2500)	;load timer 1 register (TCNT1) with timer_count_250
+	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_250
 	out TCNT1H, temp
-	ldi temp, low(timer_count_2500)
+	ldi temp, low(timer_count_150)
 	out TCNT1L, temp
 
 	in	temp, TIMSK
@@ -380,20 +380,41 @@ disable_btn:
 	out GIMSK, temp			; disable int0
 	ret
 
+;btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
+;	rcall disable_btn
+;	rcall disable_uart
+;	rcall start_timer1
+;	sei
+;	rjmp toggle
+
 btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
 	rcall disable_btn
 	rcall disable_uart
 	rcall start_timer1
+	reti
+
+
+timer1_ovf:
+;check_falling
+	in temp, MCUCR
+	andi temp, 0b00000011	; get last 2 bits of MCUCR
+	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
+	brne set_falling_phase
+	; set_rising phase
+	rcall set_btn_down
+	reti
+set_falling_phase:
+	rcall set_btn_up
 	sei
 	rjmp toggle
 
 
 
-reactivate_btn:	
-		rcall stop_timer1
-		rcall set_btn_up
-		sei
-		reti
+;reactivate_btn:
+;		rcall stop_timer1
+;		rcall set_btn_up
+;		sei
+;		reti
 
 ;check_bounce:	
 	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
