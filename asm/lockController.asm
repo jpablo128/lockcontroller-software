@@ -102,8 +102,8 @@ reset:
 	sei						; enable global interrupts
 
 	;rjmp ef1
-	rjmp idle;
-	;rjmp open		; on start up, let's just open the lock... to see... the motor stalls
+	;rjmp idle;
+	rjmp open		; on start up, let's just open the lock... to see... the motor stalls
 	;rjmp close		; on start up, let's close.... it doesn't stall
 
 	
@@ -131,32 +131,32 @@ step:
 	;sbi PortB, 4	; enable L293D
 
 sf1:
-	;ldi coilbits, 0b00000011
-	ldi coilbits, 0b00000001
+	ldi coilbits, 0b00000011
+	;ldi coilbits, 0b00000001
 	rcall set_coils
 	ldi ZL, low(sf2)	; save the return address
 	ldi ZH, high(sf2)
 	rjmp delay			; JUMP!! call delay 10ms
 
 sf2:
-	;ldi coilbits, 0b00000110
-	ldi coilbits, 0b00000010
+	ldi coilbits, 0b00000110
+	;ldi coilbits, 0b00000010
 	rcall set_coils
 	ldi ZL, low(sf3)	; save the return address
 	ldi ZH, high(sf3)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf3:
-	;ldi coilbits, 0b00001100
-	ldi coilbits, 0b00000100
+	ldi coilbits, 0b00001100
+	;ldi coilbits, 0b00000100
 	rcall set_coils
 	ldi ZL, low(sf4)	; save the return address
 	ldi ZH, high(sf4)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf4:
-	;ldi coilbits, 0b00001001
-	ldi coilbits, 0b00001000
+	ldi coilbits, 0b00001001
+	;ldi coilbits, 0b00001000
 	rcall set_coils
 	ldi ZL, low(sfe)	; save the return address
 	ldi ZH, high(sfe)
@@ -171,39 +171,39 @@ sfe:
 endclose:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
-	;ldi coilbits, 0b00000000
+	ldi coilbits, 0b00000000
 	rcall set_coils
 	rjmp idle
 
 
 
 sb1:
-	;ldi coilbits, 0b00001001
-	ldi coilbits, 0b00000001
+	ldi coilbits, 0b00001001
+	;ldi coilbits, 0b00000001
 	rcall set_coils
 	ldi ZL, low(sb2)	; save the return address
 	ldi ZH, high(sb2)
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb2:
-	;ldi coilbits, 0b00001100
-	ldi coilbits, 0b00001000
+	ldi coilbits, 0b00001100
+	;ldi coilbits, 0b00001000
 	rcall set_coils
 	ldi ZL, low(sb3)	; save the return address
 	ldi ZH, high(sb3)
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb3:
-	;ldi coilbits, 0b00000110
-	ldi coilbits, 0b00000100
+	ldi coilbits, 0b00000110
+	;ldi coilbits, 0b00000100
 	rcall set_coils
 	ldi ZL, low(sb4)	; save the return address
 	ldi ZH, high(sb4)	
 	rjmp delay			; JUMP!! call delay 10ms
 
 sb4:
-	;ldi coilbits, 0b00000011
-	ldi coilbits, 0b00000010
+	ldi coilbits, 0b00000011
+	;ldi coilbits, 0b00000010
 	rcall set_coils
 	ldi ZL, low(sbe)	; save the return address
 	ldi ZH, high(sbe)
@@ -218,13 +218,14 @@ sbe:
 endopen:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
-	;ldi coilbits, 0b00000000
+	ldi coilbits, 0b00000000
 	rcall set_coils
 	rjmp idle
 
 
 set_coils:				; set the coils to a given polarization. The parameter is passed through the 'coilbits' register
-	ldi temp, PortB
+	;ldi temp, PortB
+	in	temp, PortB
 	andi temp, 0b11110000	; preserve the high nibble
 	or   temp, coilbits		; set the low nibble
 	out PortB, temp			; send new value to PortB
