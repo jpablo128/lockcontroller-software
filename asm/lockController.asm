@@ -380,23 +380,19 @@ disable_btn:
 	ret
 
 btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
-	in temp, SREG	; save the status register
-	push temp		; on the stack
-
 	rcall disable_btn
 	rcall disable_uart
 	rcall start_timer1
+	sei
+	rjmp toggle
 
-	pop temp		; from the stack
-	out SREG, temp	; restore the status register
-	reti
 
 
 reactivate_btn:	
 		rcall stop_timer1
 		rcall set_btn_up
 		sei
-		rjmp toggle
+		reti
 
 ;check_bounce:	
 	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
@@ -432,7 +428,7 @@ reactivate_btn:
 ;		rcall set_btn_up
 ;		; when the bounce up ends, we DO THE TOGGLE
 ;		sei				; enable global interrupts, since we're not using reti here
-		rjmp toggle
+;		rjmp toggle
 
 
 init_btn:					;initialize int0 etc. based on the physical state of the button, read PinD2, and set status according to pin
