@@ -57,6 +57,7 @@ reti				; Analog Comparator vector address (0x000A)
 .equ timer_count_10=0xB0		; -80 = 0xB0
 .equ timer_count_15=0x88		; -120 = 0x88
 .equ timer_count_20=0x60		; -160 = 0x60
+.equ timer_count_30=0x10		; -240 = 0x10
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
 .equ timer_count_2500=0xB1E0	; -20000 = 0xB1E0
@@ -303,7 +304,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_20
+	ldi temp, timer_count_30
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
