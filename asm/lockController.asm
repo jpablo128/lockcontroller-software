@@ -59,6 +59,7 @@ reti				; Analog Comparator vector address (0x000A)
 .equ timer_count_20=0x60		; -160 = 0x60
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
+.equ timer_count_2500=0xB1E0	; -20000 = 0xB1E0
 
 
 reset:
@@ -106,7 +107,7 @@ reset:
 
 	;rjmp ef1
 	;rjmp idle;
-	rjmp open		; on start up, let's just open the lock... to see... the motor stalls
+	;rjmp open		; on start up, let's just open the lock... to see... the motor stalls
 	;rjmp close		; on start up, let's close.... it doesn't stall
 
 	
@@ -186,7 +187,7 @@ sb1:
 	rcall set_coils
 	ldi ZL, low(sb2)	; save the return address
 	ldi ZH, high(sb2)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb2:
 	ldi coilbits, 0b00001100
@@ -194,7 +195,7 @@ sb2:
 	rcall set_coils
 	ldi ZL, low(sb3)	; save the return address
 	ldi ZH, high(sb3)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb3:
 	ldi coilbits, 0b00000110
@@ -202,7 +203,7 @@ sb3:
 	rcall set_coils
 	ldi ZL, low(sb4)	; save the return address
 	ldi ZH, high(sb4)	
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb4:
 	ldi coilbits, 0b00000011
@@ -210,7 +211,7 @@ sb4:
 	rcall set_coils
 	ldi ZL, low(sbe)	; save the return address
 	ldi ZH, high(sbe)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sbe:
 	; check if we've reached the end position (open). We're assuming that 'backward' direction is 'open lock'.
@@ -227,9 +228,8 @@ endopen:					; here, the lock is completely open. Reset everything and go to idl
 
 
 set_coils:				; set the coils to a given polarization. The parameter is passed through the 'coilbits' register
-	;ldi temp, PortB
 	in	temp, PortB
-	andi temp, 0b11110000	; preserve the high nibble
+	andi temp, 0b11110000	; preserve the high nibble, clear the low nibble
 	or   temp, coilbits		; set the low nibble
 	out PortB, temp			; send new value to PortB
 	ret
@@ -303,7 +303,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_15
+	ldi temp, timer_count_20
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
@@ -321,9 +321,9 @@ start_timer1:
 	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
 	out TCCR1B, temp
 
-	ldi temp, high(timer_count_250)	;load timer 1 register (TCNT1) with timer_count_250
+	ldi temp, high(timer_count_2500)	;load timer 1 register (TCNT1) with timer_count_250
 	out TCNT1H, temp
-	ldi temp, low(timer_count_250)
+	ldi temp, low(timer_count_2500)
 	out TCNT1L, temp
 
 	in	temp, TIMSK
