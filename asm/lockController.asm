@@ -47,6 +47,7 @@ reti				; Analog Comparator vector address (0x000A)
 ; calculations for a clock of 8 MHz  (new test board)
 ; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
 ; for 10 millisecond -> 80 ticks.
+; for 15 millisecond -> 120 ticks.
 ; for 20 millisecond -> 160 ticks.
 ; for 150 milliseconds: 1200 ticks. We need timer 1 (2 bytes)
 ; for 250 milliseconds: 2000 ticks. We need timer 1 (2 bytes)
@@ -54,6 +55,7 @@ reti				; Analog Comparator vector address (0x000A)
 
 .equ timer_count_5=0xD8			; -40 = 0xD8
 .equ timer_count_10=0xB0		; -80 = 0xB0
+.equ timer_count_15=0x88		; -120 = 0x88
 .equ timer_count_20=0x60		; -160 = 0x60
 .equ timer_count_150=0xFB50		; -1200 = 0xFB50
 .equ timer_count_250=0xFF06		; -2000 = 0xFF06
@@ -301,7 +303,7 @@ disable_uart:
 start_timer0:
 	ldi temp, 0b00000101			; set prescaler to CK/1024
 	out TCCR0, temp				; Timer/Counter 0 Control Register  
-	ldi temp, timer_count_10
+	ldi temp, timer_count_15
 	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
 
 	in	temp, TIMSK
