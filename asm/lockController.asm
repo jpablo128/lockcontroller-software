@@ -1,24 +1,13 @@
 .include "2313def.inc"
 
-
 .def temp =r16
-
-.def outctrl=r18	; outcontrol will have the value to output on port b. It controls the motor, both L293D enable pins, and the leds.
-					; bits 3, 2, 1, and 0: control the motor (values 1, 2, 4, 8)
-					; bit 4 enables/disables the L293D
-					; bit 5 turns on/off the Red led  (used when closing/closed)
-					; bit 6 turns on/off the Green led (used when opening/opened)
 
 ; let's say that the sequence 1, 2, 4, 8 causes the 'closing' movement, and the reverse causes the 'opening' movement.
 ; this will depend on how things are arranged physically.
 
-.def retaddr=r19
 .def limitsw=r20	; limit switch to check for
 .def temp2=r21
-.def btnstatus=r22	; status=0 => being pushed, status=1 => being released
 .def coilbits=r23
-
-;.equ nibbles =0b10100101
 
 .org 0x0000			; 
 rjmp reset			; reset vector address (0x0000)
@@ -84,8 +73,8 @@ reset:
 
 	ser temp
 	out DDRB,temp		; Set port B direction out
-	clr outctrl			; set r18 to 0b00000000
-	out PortB, outctrl 	; set all port B outputs to 0
+	clr temp			; 
+	out PortB, temp		; set all port B outputs to 0
 
 	; set pd2, pd4 and pd5 as inputs, activate their pull-up resistors
 	; port D is input by default
@@ -94,8 +83,6 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	;rcall enable_uart
-	;rcall init_btn	
 	rcall set_btn_up		; this already enables uart
 
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
@@ -136,32 +123,32 @@ step:
 	;sbi PortB, 4	; enable L293D
 
 sf1:
-	ldi coilbits, 0b00000011
-	;ldi coilbits, 0b00000001
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000001
 	rcall set_coils
 	ldi ZL, low(sf2)	; save the return address
 	ldi ZH, high(sf2)
 	rjmp delay			; JUMP!! call delay 10ms
 
 sf2:
-	ldi coilbits, 0b00000110
-	;ldi coilbits, 0b00000010
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b00000010
 	rcall set_coils
 	ldi ZL, low(sf3)	; save the return address
 	ldi ZH, high(sf3)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf3:
-	ldi coilbits, 0b00001100
-	;ldi coilbits, 0b00000100
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00000100
 	rcall set_coils
 	ldi ZL, low(sf4)	; save the return address
 	ldi ZH, high(sf4)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf4:
-	ldi coilbits, 0b00001001
-	;ldi coilbits, 0b00001000
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00001000
 	rcall set_coils
 	ldi ZL, low(sfe)	; save the return address
 	ldi ZH, high(sfe)
@@ -183,32 +170,32 @@ endclose:					; here, the lock is completely open. Reset everything and go to id
 
 
 sb1:
-	ldi coilbits, 0b00001001
-	;ldi coilbits, 0b00000001
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00000001
 	rcall set_coils
 	ldi ZL, low(sb2)	; save the return address
 	ldi ZH, high(sb2)
 	rjmp delay			; 
 
 sb2:
-	ldi coilbits, 0b00001100
-	;ldi coilbits, 0b00001000
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00001000
 	rcall set_coils
 	ldi ZL, low(sb3)	; save the return address
 	ldi ZH, high(sb3)
 	rjmp delay			; 
 
 sb3:
-	ldi coilbits, 0b00000110
-	;ldi coilbits, 0b00000100
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b000000100
 	rcall set_coils
 	ldi ZL, low(sb4)	; save the return address
 	ldi ZH, high(sb4)	
 	rjmp delay			; 
 
 sb4:
-	ldi coilbits, 0b00000011
-	;ldi coilbits, 0b00000010
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000010
 	rcall set_coils
 	ldi ZL, low(sbe)	; save the return address
 	ldi ZH, high(sbe)
@@ -410,147 +397,3 @@ set_falling_phase:
 
 
 
-;reactivate_btn:
-;		rcall stop_timer1
-;		rcall set_btn_up
-;		sei
-;		reti
-
-;check_bounce:	
-	; first, decide if we need to check for the end of push bounce (stable value is 0), or the end of release bounce (stable value is 1)
-	; if int0 is disabled the button was being pushed, so the stable value of PinD 2 is 0
-;check_falling
-;	in temp, MCUCR
-;	andi temp, 0b00000011	; get last 2 bits of MCUCR
-;	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
-;	;breq stable_0
-;	brne is_rising
-;	; here, we were on falling edge, so the stable value is 0
-;	in temp2, PinD		; read port D pins, bit 2 is the switch
-;	andi temp2, 4		; ; vital! isolate bit 2!
-;	cpi temp2, 0
-;	breq bounce_0_ended
-;	; bounce did not end, or something weird is going on, just reti
-;	reti
-;	bounce_0_ended:		; button is stably pushed down, just wait for the raising edge
-;		rcall stop_timer1
-;		rcall set_btn_down
-;		reti
-	
-;is_rising:		;so the stable value is 1
-;	in temp2, PinD		; read port D pins, bit 2 is the switch
-;	andi temp2, 4		; vital! isolate bit 2!
-;	cpi temp2, 4
-;	breq bounce_1_ended
-;	; bounce did not end, or something weird is going on, just reti
-;	reti
-
-;	bounce_1_ended:
-;		rcall stop_timer1
-;		rcall set_btn_up
-;		; when the bounce up ends, we DO THE TOGGLE
-;		sei				; enable global interrupts, since we're not using reti here
-;		rjmp toggle
-
-
-init_btn:					;initialize int0 etc. based on the physical state of the button, read PinD2, and set status according to pin
-	in temp, PinD
-	andi temp, 0b00000100	; get bit 2 of pinD
-	cpi temp, 0b00000100	; is bit 2 set?
-	breq btn_is_up			; if so, button is (physically) up
-	;otherwise, the button is (physically) down
-	rcall set_btn_down
-	ret
-
-btn_is_up:
-	rcall set_btn_up
-	ret
-
-
-
-
-
-
-
-;start_debounce:
-	; the debounce routine uses timer1, so it doesn't interfere with timer0 (used for motor timing)
-	; disable int0 and uart interrupts
-;	ldi temp, 0
-;	out GIMSK, temp				; disable int0
-;	out UCR, temp				; disable RXCIE  and RXEN in UART
-
-	;delay150:					; we need to use timer1 for this longer delay
-;	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
-;	out TCCR1B, temp
-
-;	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_150
-;	out TCNT1H, temp
-;	ldi temp, low(timer_count_150)
-;	out TCNT1L, temp
-;
-;	in	temp, TIMSK
-;	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
-;	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
-;	reti				; continue doing whatever the program was doing
-
-
-;end_debounce:
-	; if int0 (PD2) is still 0, it's a valid push, so enable int0, enable uart interrupt, toggle
-	; if int0 (PD1) is 1, it was an invalid push, so restore Z
-;	in temp2, PinD		; read port D pins, bit 2 is the switch
-
-;	in	temp, TIMSK
-;	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
-;	out TIMSK, temp		; clear bit 7 of TIMSK, disable  Timer/Counter 1 Overflow Interrupt 
-	
-	; re-enable int0 and uart interrupts
-;	ldi temp, 0b01000000
-;	out GIMSK, temp			; enable int0
-;	ldi temp, 0b10010000		; enable RXCIE and RXEN 
-;	out UCR, temp
-
-;	sbrs temp2, 2		; if bit 2 of PortD (int0) is 1, is a valid push
-;	reti
-;	sei
-;	rjmp toggle
-
-
-;btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
-;			; if the action happened due to falling edge, the button was up (1) and now it's down (0)
-;	in temp, SREG	; save the status register
-;	push temp		; on the stack
-;
-;	in temp, MCUCR
-;	andi temp, 0b00000011	; get last 2 bits of MCUCR
-;	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
-;	breq being_pushed
-;	in temp, MCUCR
-;	andi temp, 0b00000011	; get last 2 bits of MCUCR
-;	cpi temp, 0b00000011	; do they correspond to rising edge (11) ?
-;	breq being_released
-
-	; here, there's an unknown value on the int0 setting, so init things based on the physical status of the button
-;	rcall init_btn
-
-;	pop temp		; from the stack
-;	out SREG, temp	; restore the status register
-;	reti
-	
-
-;	being_pushed:	
-;		ldi btnstatus, 0
-;		rcall disable_btn
-;		rcall disable_uart
-;		rcall wait4_bounce
-;		pop temp		; from the stack
-;		out SREG, temp	; restore the status register
-;		reti
-
-;	being_released:
-;		ldi btnstatus, 1
-;		rcall disable_btn
-;		rcall disable_uart
-;		rcall wait4_bounce
-;		pop temp		; from the stack
-;		out SREG, temp	; restore the status register
-;		reti
