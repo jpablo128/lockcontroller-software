@@ -1,4 +1,4 @@
-# Lock Controller - Software - WIP
+﻿# Lock Controller - Software - WIP
 
 This is a **Work In Progress**.
 
@@ -10,9 +10,9 @@ Note that the AT90S2313 is a very old part, no longer sold or supported by Atmel
 The system will allow to control a simple sliding lock using bluetooth. We will reuse parts from an old CD-drive, namely the stepper motor and the linear drive (mechanics that convert the rotary motion into linear motion). Other hardware parts present in the system:
 
 - a toggle switch, to manually cause the lock to open or close.
-- two infrared slot switches, to detect the end positions of the lock.
+- two microswitches, to detect the end positions of the lock.
 - two leds, one red and one green, to indicate if the lock is open or closed (stationary), or opening or closing (blinking).
-- the bluetooth module (to be determined).
+- the bluetooth module (to be determined, likely to be HC-06).
 
 So the software on the microcontroller must:
 
@@ -20,7 +20,7 @@ So the software on the microcontroller must:
 - detect when the sliding part has reached the end position (either totally open, or totally closed)
 - turn on or off the leds, or make them blink, according to the current state of the system.
 - detect a push on the switch, decide what to do, and do it (open if closed, close if open, open in any other case).
-- detect serial communication (UART), which is really coming from the Bluetooth module. The data received will be a command (to open, close, or toggle).
+- detect serial communication (UART), which is really coming from the Bluetooth module. The data received will be a command (toggle).
 - possibly, send data through the UART (BT module) to a remote system, to inform of the state of the system.
 
 
@@ -29,12 +29,12 @@ The at90s2313 pins are used as follows:
 - Pin  2: RXD (connected to TXD of BT module or arduino)
 - Pin  3: TXD (connected to RXD of BT module or arduino)
 - Pin  6: INT0/PD2 push button (toggle open/close)
-- Pin  8: PD4: input IR barrier 1
-- Pin  9: PD5: input IR barrier 2
-- Pin 12: PB0, motor control W2-0 (W=winding) these really go to the L293
-- Pin 13: PB1, motor control W2-1
-- Pin 14: PB2, motor control W1-0
-- Pin 15: PB3, motor control W1-1
+- Pin  8: PD4: open limit microswitch (positive logic: 1 when active, 0 when inactive, because most of the time it will be active)
+- Pin  9: PD5: closed limit microswitch (negative logic: 0 when active, 1 when inactive, because most of the time it will be inactive)
+- Pin 12: PB0, to pin2 of L293D, actuates on pin3 of L293D,  Winding 1 A
+- Pin 13: PB1, to pin7 of L293D, actuates on pin6 of L293D,  Winding 2 A
+- Pin 14: PB2, to pin10 of L293D, actuates on pin11 of L293D,  Winding 1 B
+- Pin 15: PB3, to pin15 of L293D, actuates on pin14 of L293D,  Winding 2 B
 - Pin 16: PB4: output enable/disable L293
 - Pin 17: PB5: green led output
 - Pin 18: PB6: red led output
@@ -64,22 +64,16 @@ The logic for the limit switches is as follows:
 There's an impossible state (the lock would be both open and closed at the same time):
 	pd5 = 0   and pd4 = 1  
 
-SAY SOMETHING ABOUT THE NEGATIVE/POSITIV LOGIC
+## Toggle button
 
+The push button implements some simple logic with bounce control. At startup, the pull-up resistor on int0/pd2 is activated, so the button is normally at 1, and we set int0 to detect a falling edge.
+When the button is pushed,timer1 is started. When timer1 overflows, we set int0 to detect a rising edg. When a rising edge is detected, we wait again (start timer1), and after that time, the button is set to 'up' again (detecting falling edge), and the toggle routine is called.
+
+## UART
+The system accepts a toggle command through the serial port (uart), at 9600 baud, N81. The command is 0b01010101  (85 dec, 55 hex, 'U' in ascii). When that character is received, the toggle routine is called automatically.
+The UART interrupt is disconnected when the toggle button is being used.
 
 ## Status / To do
+The motor stalls sometimes, particularly in one direction. Step delays between 10 and 20 ms have been tried, maybe we need longer delays.
 
-Pull request #1 (by 0xb0lu) has been merged. To test the functionality, the program makes the motor run 256 steps of each type in each direction.
-Videos of the program in action:
-
-- [https://youtu.be/ZtfYEbUmUg4](https://youtu.be/ZtfYEbUmUg4)
-- [https://youtu.be/187Hbh8Rkw4](https://youtu.be/187Hbh8Rkw4)  
-
-
-Next steps:
-
-- Modify the circuit on the breadboard to add the infrared slot detectors (limit switches)
-- Add the code to check the limit switches to stop the motor
-- Add push button to manually toggle the status of the lock and implement corresponding code.
-
-
+The essential parts of the program have been tried. The next step is a fairly big refactoring that should have been done along the way, from the beginning.
