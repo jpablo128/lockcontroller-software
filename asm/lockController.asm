@@ -1,53 +1,55 @@
 .include "2313def.inc"
 
-; THIS 1ST VERSION of the program just runs the motor in one direction continuously
-
 .def temp =r16
-
-; Maybe we don't really need a 'state' control... just looking at the IR inputs may be enough?
-.def state=r17		; current state of the system: bits 2, 1 and 0:
-					; 001 -> lock closed
-					; 010 -> lock opened
-					; 101 -> closing lock
-					; 110 -> opening lock
-					; 111 -> undetermined or changing state
-					; bits 5, 4 and 3 are the 'previous' state
-
-.def outctrl=r18	; outcontrol will have the value to output on port b. It controls the motor, both L293D enable pins, and the leds.
-					; bits 3, 2, 1, and 0: control the motor (values 1, 2, 4, 8)
-					; bit 4 enables/disables the L293D
-					; bit 5 turns on/off the Red led  (used when closing/closed)
-					; bit 6 turns on/off the Green led (used when opening/opened)
 
 ; let's say that the sequence 1, 2, 4, 8 causes the 'closing' movement, and the reverse causes the 'opening' movement.
 ; this will depend on how things are arranged physically.
 
-.def retaddr=r19
 .def limitsw=r20	; limit switch to check for
+.def temp2=r21
+.def coilbits=r23
 
-;.equ nibbles =0b10100101
-
-.org 0x0000		; 
-rjmp reset		; reset vector address (0x0000)
-rjmp toggle		; external interrupt 0 vector address (0x0001
-reti			; external interrupt 1 vector address (0x0002)
-reti			; timer 1 capture event vector address (0x0003)
-reti			; timer 1 compare match vector address (0x0004)
-reti			;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
-rjmp delay_end	;rjmp delay_end	; timer 0 overflow vector address (0x0006)
-reti			; UART Rx Complete vector address (0x0007)
-reti			; UART Data Register Empty vector address (0x0008)
-reti			; UART Tx Complete vector address (0x0009)
-reti			; Analog Comparator vector address (0x000A)
+.org 0x0000			; 
+rjmp reset			; reset vector address (0x0000)
+rjmp btn_action		; external interrupt 0 vector address (0x0001
+reti				; external interrupt 1 vector address (0x0002)
+reti				; timer 1 capture event vector address (0x0003)
+reti				; timer 1 compare match vector address (0x0004)
+rjmp timer1_ovf		;rjmp timer1_ovf ; timer 1 overflow vector address (0x0005)
+rjmp delay_end		;rjmp delay_end	; timer 0 overflow vector address (0x0006)
+rjmp uart_rxd   	; UART Rx Complete vector address (0x0007)
+reti				; UART Data Register Empty vector address (0x0008)
+reti				; UART Tx Complete vector address (0x0009)
+reti				; Analog Comparator vector address (0x000A)
 
 
 ; calculations for a clock of 6.1440 MHz
 ; 6144000 / 1024 = 6000 this is the number of ticks I get in a second. 6 ticks per millisecond.
 ; 60 ticks = 10 milliseconds. Enough for it to move reliably (?)
+; for 150ms: 900 ticks
 
-.equ timer_count=0xC4		; -60 = 0xC4
-.equ timer_150=0xFC7C		; -150 = FC7C
+;.equ timer_count_10	=0xC4		; -60 = 0xC4
+;.equ timer_count_20=0x88		; -120 = 0x88
+;.equ timer_count_150=0xFC7C		; -900 = 0xFC7C
+;.equ timer_count_250=0xF8F8		; -900 = 0xF8F8
 
+; calculations for a clock of 8 MHz  (new test board)
+; 8000000 / 1024 = 7812.5 this is the number of ticks I get in a second. 7.8125 ticks per millisecond (8 ticks)
+; for 10 millisecond -> 80 ticks.
+; for 15 millisecond -> 120 ticks.
+; for 20 millisecond -> 160 ticks.
+; for 150 milliseconds: 1200 ticks. We need timer 1 (2 bytes)
+; for 250 milliseconds: 2000 ticks. We need timer 1 (2 bytes)
+
+
+.equ timer_count_5=0xD8			; -40 = 0xD8
+.equ timer_count_10=0xB0		; -80 = 0xB0
+.equ timer_count_15=0x88		; -120 = 0x88
+.equ timer_count_20=0x60		; -160 = 0x60
+.equ timer_count_30=0x10		; -240 = 0x10
+.equ timer_count_150=0xFB50		; -1200 = 0xFB50
+.equ timer_count_250=0xFF06		; -2000 = 0xFF06
+.equ timer_count_2500=0xB1E0	; -20000 = 0xB1E0
 
 
 reset:
@@ -69,11 +71,10 @@ reset:
 
 	; set port B as output
 
-	ldi state, 0b00000111	; set state to unknown
 	ser temp
 	out DDRB,temp		; Set port B direction out
-	clr outctrl			; set r18 to 0b00000000
-	out PortB, outctrl 	; set all port B outputs to 0
+	clr temp			; 
+	out PortB, temp		; set all port B outputs to 0
 
 	; set pd2, pd4 and pd5 as inputs, activate their pull-up resistors
 	; port D is input by default
@@ -82,39 +83,24 @@ reset:
 	ldi temp, 0b00110100	; set bits 2, 4 and 5 ...
 	out PortD, temp			; of portD, thus activating pull-up resistors on pins 2, 4 and 5
 
-	; set state according to input
+	rcall set_btn_up		; this already enables uart
 
- 
-	sei						; enable global interrupts
-	
-	ldi temp, 0b00000011
-	out MCUCR, temp			; set rising edge on int0
-	ldi temp, 0b01000000
-	out GIMSK, temp			; enable int0
-	
 	; TEMPORARY HACK!! in the final program we will only enable the l293D when the motor needs to move!
 	sbi PortB, 4	; enable L293D
-
+	
 	ldi ZL, 0
 	ldi ZH, 0
 
+	sei						; enable global interrupts
+
 	;rjmp ef1
-	rjmp idle;
-	;open		; on start up, let's just open the lock. In real life... I'm not sure we'd want to do this!
+	;rjmp idle;
+	;rjmp open		; on start up, let's just open the lock... to see... the motor stalls
+	;rjmp close		; on start up, let's close.... it doesn't stall
+
 	
 
 idle:
-	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
-	; if timer 0 is on, we're still in a delay, so let's continue idling
-	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
-	in temp, TIMSK
-	sbrc temp, 1		; if bit 1 of TIMSK is cleared,it means that timer 0 is off
-	rjmp idle
-	cpi	ZL, 0			; compare return address with 0
-	breq idle			; is not 0, loop again
-	ijmp				; it is 0, do an indirect jump (address in Z register).
-
-
 	; if timer 0 is off, it means we've just returned from delay_end, so we need to check ZL
 	; if timer 0 is on, we're still in a delay, so let's continue idling
 	;sbrc temp, 7		; if bit 7 of TIMSK is cleared,it means that timer 1 is off
@@ -137,31 +123,33 @@ step:
 	;sbi PortB, 4	; enable L293D
 
 sf1:
-	cbi PortB, 3		; turn off bit 3
-	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 1		; turn on bit 1
-	sbi PortB, 0		; turn on bit 0
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000001
+	rcall set_coils
 	ldi ZL, low(sf2)	; save the return address
 	ldi ZH, high(sf2)
 	rjmp delay			; JUMP!! call delay 10ms
 
 sf2:
-	cbi PortB, 0		; turn off bit 0
-	sbi PortB, 2		; turn on bit 2
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b00000010
+	rcall set_coils
 	ldi ZL, low(sf3)	; save the return address
 	ldi ZH, high(sf3)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf3:
-	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 3		; turn on bit 3
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00000100
+	rcall set_coils
 	ldi ZL, low(sf4)	; save the return address
 	ldi ZH, high(sf4)
 	rjmp delay			; JUMP!! call delay 10ms
 	
 sf4:
-	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 0		; turn on bit 4
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00001000
+	rcall set_coils
 	ldi ZL, low(sfe)	; save the return address
 	ldi ZH, high(sfe)
 	rjmp delay			; JUMP!! call delay 10ms
@@ -175,39 +163,43 @@ sfe:
 endclose:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
+	ldi coilbits, 0b00000000
+	rcall set_coils
 	rjmp idle
 
 
 
 sb1:
-	sbi PortB, 3		; turn on bit 3
-	cbi PortB, 2		; turn off bit 2
-	cbi PortB, 1		; turn off bit 1
-	sbi PortB, 0		; turn on bit 0
+	;ldi coilbits, 0b00001001
+	ldi coilbits, 0b00000001
+	rcall set_coils
 	ldi ZL, low(sb2)	; save the return address
 	ldi ZH, high(sb2)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb2:
-	cbi PortB, 0		; turn off bit 0
-	sbi PortB, 2		; turn on bit 2
+	;ldi coilbits, 0b00001100
+	ldi coilbits, 0b00001000
+	rcall set_coils
 	ldi ZL, low(sb3)	; save the return address
 	ldi ZH, high(sb3)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb3:
-	cbi PortB, 3		; turn off bit 3
-	sbi PortB, 1		; turn on bit 1
+	;ldi coilbits, 0b00000110
+	ldi coilbits, 0b000000100
+	rcall set_coils
 	ldi ZL, low(sb4)	; save the return address
 	ldi ZH, high(sb4)	
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sb4:
-	cbi PortB, 2		; turn off bit 2
-	sbi PortB, 0		; turn on bit 0
+	;ldi coilbits, 0b00000011
+	ldi coilbits, 0b00000010
+	rcall set_coils
 	ldi ZL, low(sbe)	; save the return address
 	ldi ZH, high(sbe)
-	rjmp delay			; JUMP!! call delay 10ms
+	rjmp delay			; 
 
 sbe:
 	; check if we've reached the end position (open). We're assuming that 'backward' direction is 'open lock'.
@@ -218,44 +210,31 @@ sbe:
 endopen:					; here, the lock is completely open. Reset everything and go to idle
 	ldi ZL, 0
 	ldi ZH, 0
+	ldi coilbits, 0b00000000
+	rcall set_coils
 	rjmp idle
 
 
+set_coils:				; set the coils to a given polarization. The parameter is passed through the 'coilbits' register
+	in	temp, PortB
+	andi temp, 0b11110000	; preserve the high nibble, clear the low nibble
+	or   temp, coilbits		; set the low nibble
+	out PortB, temp			; send new value to PortB
+	ret
 
 ; this is for timer 0
 delay:		; we need a delay after setting each phase of a step.
-	ldi r16, 0b00000101			; set prescaler to CK/1024
-	out TCCR0, r16				; Timer/Counter 0 Control Register  
-
-	ldi r16, 0b00000010	; Timer/Counter 0 Overflow Interrupt Enable bit set
-	out TIMSK, r16
-
-	ldi r16, timer_count
-	out TCNT0, r16				; Put counter time in TCNT0 (Timer/Counter 0), start counting
+	rcall start_timer0
 	rjmp idle
 
 
-
-
 delay_end:		; Timer 0 ISR, the delay finished.
-	in r16, SREG	; save the status register
-	push r16		; on the stack
-
-	; if there's a reason to stop the delay timer, stop it, otherwise it will keep on running.
-	ldi r16, 0
-	out TCCR0, r16		; disable Timer0 
-
-	ldi r16, 0b00000000	; Timer/Counter 0 Overflow Interrupt Enable bit cleared (interrupt disabled)
-	out TIMSK, r16
-
-	pop r16			; from the stack
-	out SREG, r16	; restore the status register
+	in temp, SREG	; save the status register
+	push temp		; on the stack
+	rcall stop_timer0
+	pop temp		; from the stack
+	out SREG, temp	; restore the status register
 	reti
-
-find_state:
-	nop
-	; if open barrier active, set to open
-	; if closed barrier active, set to closed
 
 
 open:
@@ -271,36 +250,150 @@ close:
 toggle:
 	ldi limitsw, 0b00010000	; check if 'open' limit switch is active
 	in temp, PinD			; read port D pins
-	
-	sei
+	sei						; this sei here is vital!!
 	and temp, limitsw
 	brbc SREG_Z, close		; branch if status flag Z is set, that is, if result of 'and' was  zero
 
 	rjmp open				; if and was 0, the lock is not completely open, so we open it (default action)
 
+uart_rxd:
+	in temp, SREG	; save the status register
+	push temp		; on the stack
+
+	in temp2, UDR 
+	cpi temp2, 0b01010101
+	breq toggle
+	pop temp		; from the stack
+	out SREG, temp	; restore the status register
+	reti
+
+	
 
 
-	; read pd4, if 1 , we should close
-	; in any other case, open
+; General routines
 
-	;ldi ZL, low(conttlg)	; save the return address
-	;ldi ZH, high(conttgl)
-	;rjmp delay2			; JUMP!! call delay 150ms
-
-	; this is hardware interrupt 0. Set it up on the rising edge of INT0.
-	; WE MUST eliminate bounces in the software, so, when this ISR is called:
-	;	- disable hardware interrupt 0
-	;	- start counting 150 ms (for example), reti
-	;	- at the end of the 150 ms, check if INT0 is still 1
-	;	- if it is, determine what to do, as noted below (re-enable HW interrupt 0, rising edge)
-	;	- if it's not,  re-enable HW interrupt 0, rising edge) and reti 
-	;nop
-		
-	; read open barrier, if active (logical 1), close.
-	; read closed barrier, if active (logical 0), open
-	; if neither is active, just open (default action)
+; uart routines
+enable_uart:
+	ldi temp, 51			;9600 baud on an 8 MHz clock
+	;ldi temp, 39			;9600 baud on a 6.1440 MHz clock
+	out UBRR, temp
+	 
+	ldi temp, 0b10010000		; enable RXCIE and RXEN 
+	out UCR, temp
+	ret
+ 
+disable_uart:
+	ldi temp, 0b00000000		; disable RXCIE and RXEN 
+	out UCR, temp
+	ret
 
 
-; NEXT STEPS:
-; - light up leds according to state/action.
-; - UART interrupt: receive an Open, Close or Toggle command through the serial port (in the future, through Bluetooth)
+start_timer0:
+	ldi temp, 0b00000101			; set prescaler to CK/1024
+	out TCCR0, temp				; Timer/Counter 0 Control Register  
+	ldi temp, timer_count_30
+	out TCNT0, temp			; Put counter time in TCNT0 (Timer/Counter 0), start counting
+
+	in	temp, TIMSK
+	sbr	temp, 2			; set bit 1 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
+	ret	
+
+stop_timer0:
+	in	temp, TIMSK
+	cbr	temp, 2			; clear bit 1 of whataver was in TIMSK
+	out TIMSK, temp		; clear bit 1 of TIMSK, Timer/Counter 0 Overflow Interrupt Enable
+	ret	
+
+start_timer1:
+	ldi temp, 0b00000101		; set timer 1 prescaler to CK/1024 CS10 and CS12 for 1024 cycle prescaler
+	out TCCR1B, temp
+
+	ldi temp, high(timer_count_150)	;load timer 1 register (TCNT1) with timer_count_250
+	out TCNT1H, temp
+	ldi temp, low(timer_count_150)
+	out TCNT1L, temp
+
+	in	temp, TIMSK
+	sbr	temp, 128		; set bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; set bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	ret	
+
+stop_timer1:
+	in	temp, TIMSK
+	cbr	temp, 128		; clear bit 7 of whataver was in TIMSK
+	out TIMSK, temp		; clear bit 7 of TIMSK, Timer/Counter 1 Overflow Interrupt Enable
+	ret	
+
+; probable should write enable_int0 and disable_int0
+
+; Push button management code
+; we have a theoretical button state (no need for a variable, can be inferred by the edge setting of int0), and the physical reality.
+; btnstate = 1  button is up, pinD 2 is 1. In this state, the button 'action' we expect is 'press', so int0 needs to look for a falling edge
+; when the falling edge is detected, we disconnect int0 totally, and wait 150ms for the bounce to end, then we check if the button is still pressed
+; that is, pinD 2 is still 0. 
+; If it's not, either the bounce has not finished, or it was a quick, useless press, so we go back to state 'up', look for falling edge, and idle.
+; If pinD 2 is still 0, it's a valid push, so we'll set the state to pushed, and wait a rising edge
+; when the rising edge happens, we disconnect int0, and wait 150ms for the release bounce to end, then we check if the button is still released,
+; than is, pinD 2 is still 1.
+; if it's not, either the release bounce has not finished, or something weird has happened, so we go bakc to state 'down', look for rising edge, and idle.
+; if pinD 2 was still 1, it's a valid release, so we'll set the state to 'up' (1), wait for falling edge. AND DO THE TOGGLE!!
+
+; so basically, if there's a valid push/release cycle, do the toggle.
+; so the toggle is done if:
+;	1- the bounce has really ended
+;	2- the state of the button is released
+; let's disable the UART interrupt while there's a possible button action (restored when the action aborts or ends)
+
+
+set_btn_up:					; set btnstate to 1, int0 to falling edge. This is called for a 'stable' button state, when bounce hase finished.
+	ldi temp, 0b00000010	; activate int0 on falling edge
+	out MCUCR, temp			
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
+	rcall enable_uart
+	ret
+
+set_btn_down:				; set btnstate to 0, int0 to raising edge. This is called for a 'stable' button state, when bounce hase finished.
+	ldi temp, 0b00000011	; activate int0 on rising edge
+	out MCUCR, temp			
+	ldi temp, 0b01000000
+	out GIMSK, temp			; enable int0
+	rcall disable_uart
+	ret
+
+disable_btn:
+	ldi temp, 0b00000000
+	out GIMSK, temp			; disable int0
+	ret
+
+;btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
+;	rcall disable_btn
+;	rcall disable_uart
+;	rcall start_timer1
+;	sei
+;	rjmp toggle
+
+btn_action:	; a button action happened. Disconnect int0 and wait for bounce to stabilize.
+	rcall disable_btn
+	rcall disable_uart
+	rcall start_timer1
+	reti
+
+
+timer1_ovf:
+;check_falling
+	in temp, MCUCR
+	andi temp, 0b00000011	; get last 2 bits of MCUCR
+	cpi temp, 0b00000010	; do they correspond to falling edge (10) ?
+	brne set_falling_phase
+	; set_rising phase
+	rcall set_btn_down
+	reti
+set_falling_phase:
+	rcall set_btn_up
+	sei
+	rjmp toggle
+
+
+
