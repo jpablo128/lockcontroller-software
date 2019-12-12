@@ -52,17 +52,18 @@ The logic for the limit switches is as follows:
       1     0     -> somewhere in between
       0     1     -> impossible
 
-	open:
-		ldi limitsw, 0b00010000	; define which limit switch to test for,  pd4 is for the 'open' limit switch
-		rjmp sb1					; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
+    open:
+        ldi limitsw, 0b00010000    ; define which limit switch to test for,  pd4 is for the 'open' limit switch
+        rjmp sb1                    ; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
 
 
-	close:	
-		ldi limitsw, 0b00100000	; define which limit switch to test for, pd5 is for 'close' limit switch
-		rjmp sf1					; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
+    close:    
+        ldi limitsw, 0b00100000    ; define which limit switch to test for, pd5 is for 'close' limit switch
+        rjmp sf1                    ; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
 
 There's an impossible state (the lock would be both open and closed at the same time):
-	pd5 = 0   and pd4 = 1  
+    pd5 = 0   and pd4 = 1  
+
 
 ## Toggle button
 
