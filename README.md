@@ -11,8 +11,8 @@ The system will allow to control a simple sliding lock using bluetooth. We will 
 
 - a toggle switch, to manually cause the lock to open or close.
 - two microswitches, to detect the end positions of the lock.
-- two leds, one red and one green, to indicate if the lock is open or closed (stationary), or opening or closing (blinking).
-- the bluetooth module (to be determined, likely to be HC-06).
+- two leds, one red and one green, to indicate if the lock is open or closed (stationary), or opening or closing (blinking). Not used as of now.
+- the bluetooth module for serial communication.	
 
 So the software on the microcontroller must:
 
@@ -31,13 +31,14 @@ The at90s2313 pins are used as follows:
 - Pin  6: INT0/PD2 push button (toggle open/close)
 - Pin  8: PD4: open limit microswitch (positive logic: 1 when active, 0 when inactive, because most of the time it will be active)
 - Pin  9: PD5: closed limit microswitch (negative logic: 0 when active, 1 when inactive, because most of the time it will be inactive)
-- Pin 12: PB0, to pin2 of L293D, actuates on pin3 of L293D,  Winding 1 A
-- Pin 13: PB1, to pin7 of L293D, actuates on pin6 of L293D,  Winding 2 A
-- Pin 14: PB2, to pin10 of L293D, actuates on pin11 of L293D,  Winding 1 B
-- Pin 15: PB3, to pin15 of L293D, actuates on pin14 of L293D,  Winding 2 B
+- Pin 12: PB0, to pin2 of L293D, actuates on pin3 of L293D,  Coil 2B
+- Pin 13: PB1, to pin7 of L293D, actuates on pin6 of L293D,  Coil 2A
+- Pin 14: PB2, to pin10 of L293D, actuates on pin11 of L293D,  Coil 1B
+- Pin 15: PB3, to pin15 of L293D, actuates on pin14 of L293D,  Coil 1A
 - Pin 16: PB4: output enable/disable L293
 - Pin 17: PB5: green led output
 - Pin 18: PB6: red led output
+
 
 ## Open/close logic notes
 
@@ -52,15 +53,7 @@ The logic for the limit switches is as follows:
       1     0     -> somewhere in between
       0     1     -> impossible
 
-    open:
-        ldi limitsw, 0b00010000    ; define which limit switch to test for,  pd4 is for the 'open' limit switch
-        rjmp sb1                    ; just jumpo to the 'open' sequence. Let's say that the 'open' movement is 'backward'
-
-
-    close:    
-        ldi limitsw, 0b00100000    ; define which limit switch to test for, pd5 is for 'close' limit switch
-        rjmp sf1                    ; just jumpo to the 'close' sequence. Let's say that the 'close' movement is 'forward'
-
+    
 There's an impossible state (the lock would be both open and closed at the same time):
     pd5 = 0   and pd4 = 1  
 
@@ -68,13 +61,19 @@ There's an impossible state (the lock would be both open and closed at the same 
 ## Toggle button
 
 The push button implements some simple logic with bounce control. At startup, the pull-up resistor on int0/pd2 is activated, so the button is normally at 1, and we set int0 to detect a falling edge.
-When the button is pushed,timer1 is started. When timer1 overflows, we set int0 to detect a rising edg. When a rising edge is detected, we wait again (start timer1), and after that time, the button is set to 'up' again (detecting falling edge), and the toggle routine is called.
+When the button is pushed, the program waits for the bounce to finish. For this, it samples the input of the button every few milliseconds, and puts the sampled bit into a regiser.The samples are rolled from left to right, so the sampling routine will always look at the last 8 samples. If all the samples have the same value, the bounce is considered to have finished (thus, a value or 0 is stable down, and a value of 0xFF is stable up).
+When stable down is detected, int0 is set to trigger on the rising edge, and the exact same bounce routine will be called. This bounce method seems to work very well. It will work for short or long pulses, or even in the unlikely case that the push/release is so fast that the down bounce doesn't finish and the up-bounce starts. The routine only cares about reaching a stable state.
+Stable down just stops things. Stable up triggers a togggle on the lock.
+
 
 ## UART
 The system accepts a toggle command through the serial port (uart), at 9600 baud, N81. The command is 0b01010101  (85 dec, 55 hex, 'U' in ascii). When that character is received, the toggle routine is called automatically.
 The UART interrupt is disconnected when the toggle button is being used.
 
 ## Status / To do
-The motor stalls sometimes, particularly in one direction. Step delays between 10 and 20 ms have been tried, maybe we need longer delays.
+The whole program has been refactored totally from previous versions. It uses low-power 'sleep' mode, which not only saves energy, but it enables a (hopefully) simpler flow.
 
-The essential parts of the program have been tried. The next step is a fairly big refactoring that should have been done along the way, from the beginning.
+No misbehavior has been observed when running the program in the simulator. In the test circuit there are some anomalies and inconsistent behaviors. The stepper motor sometimes stalls on the  backward direction (dir1, clockwise). Sometimes, but not always, which is really strange. The effect is as though there's a wrong sequence being sent (or, equivalently, a wrong wiring), but it doesn't make sense, because the exact same values sent to the motor in the other direction make it move flawlessly. Toggling through the UART seems to cause less stuttering. It works most of the time, but sometimes it doesn't.
+Maybe it's a hardware problem in the motor. Other motors behave even worse... but we don't have the specs for any of the motors, they're all old salvaged parts from old CD or diskette drives.
+
+The software part of this project should be frozen until we resolvethe mechanical aspects (lock, motor, drive) and other things (power). As of now, the motor behavior is not good enough. We might end up using a simpler DC motor, or a servo, or whatever works well the the mechanics... and of course the code will have to change.
